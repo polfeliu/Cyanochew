@@ -5,7 +5,7 @@ from PyQt5.QtCore import Qt
 
 class _RegisterLayout(QtWidgets.QWidget):
 
-    clickedValue = QtCore.pyqtSignal(int)
+    selected = QtCore.pyqtSignal()
 
     # Key value store of the fields. First item is bitStart, second item is bitEnd
     fields = {
@@ -145,8 +145,6 @@ class _RegisterLayout(QtWidgets.QWidget):
         # Canvas Size
         d_height = painter.device().height() - (self._padding * 2)
         d_width = painter.device().width() - (self._padding * 2)
-
-        print(self.size())
 
         self.width_bitbox = d_width/self.bitwidth
 
@@ -424,15 +422,23 @@ class RegisterLayoutView(QtWidgets.QWidget):
         spacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.sideBar.addSpacerItem(spacer)
 
-        self.fieldlistView = QtWidgets.QListView()
+        self.fieldlistView = QtWidgets.QListWidget()
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
         self.fieldlistView.setSizePolicy(sizePolicy)
-
+        self.fieldlistView.itemSelectionChanged.connect(self.asdf)
         self.sideBar.addWidget(self.fieldlistView)
 
         layout.addLayout(self.sideBar)
 
         self.setLayout(layout)
+
+        self.updateList()
+
+    def updateList(self):
+        self.fieldlistView.addItems(self.registerLayout.fields)
+
+    def asdf(self):
+        print("dfsaasdfafsd")
 
     def resizeEvent(self, e):
         self.registerLayout.resize(
