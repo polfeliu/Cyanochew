@@ -5,7 +5,7 @@ from PyQt5.QtCore import Qt
 
 class _RegisterLayout(QtWidgets.QWidget):
 
-    selected = QtCore.pyqtSignal()
+    SelectedSignal = QtCore.pyqtSignal(object)
 
     # Key value store of the fields. First item is bitStart, second item is bitEnd
     fields =  [
@@ -292,7 +292,7 @@ class _RegisterLayout(QtWidgets.QWidget):
     def mouseMoveEvent(self, e):
         if self.dragging is not None:
             row, column = self.PosToField(e.x(), e.y())
-            #print(row,column)
+
             displacement = int((column - self.draggingOriginColumn) + (row - self.draggingOriginRow)*self.bitwidth)
 
             start = self.fields[self.dragging][1]
@@ -327,7 +327,7 @@ class _RegisterLayout(QtWidgets.QWidget):
     def mousePressEvent(self, e):
         pos = e.pos()
         self.draggingOriginRow,self.draggingOriginColumn = self.PosToField(pos.x(), pos.y())
-        print(pos)
+
         found = False
         for i, rects in self.rectFields.items():
             if found: break
@@ -369,8 +369,12 @@ class _RegisterLayout(QtWidgets.QWidget):
         if self.selected is not None:
             self.draggingOriginal = self.fields[self.selected].copy()
 
+        self.SelectedSignal.emit(self.selected)
         self.update()
 
+    def setSelected(self, index):
+        self.selected = index
+        self.update()
 
 
 class RegisterLayoutView(QtWidgets.QWidget):
@@ -381,6 +385,8 @@ class RegisterLayoutView(QtWidgets.QWidget):
         layout = QtWidgets.QHBoxLayout()
 
         self.registerLayout = _RegisterLayout()
+        self.registerLayout.SelectedSignal.connect(self.updateSelected);
+
         self.scroll = QtWidgets.QScrollArea()
 
         self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
@@ -431,7 +437,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.fieldlistView = QtWidgets.QListWidget()
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
         self.fieldlistView.setSizePolicy(sizePolicy)
-        self.fieldlistView.itemSelectionChanged.connect(self.asdf)
+        self.fieldlistView.itemSelectionChanged.connect(self.changedSelected)
         self.sideBar.addWidget(self.fieldlistView)
 
         layout.addLayout(self.sideBar)
@@ -440,12 +446,21 @@ class RegisterLayoutView(QtWidgets.QWidget):
 
         self.updateList()
 
-    def updateList(self):
-        #self.fieldlistView.addItems(self.registerLayout.fields)
-        pass
+    def updateSelected(self, i):
+        if i is not None:
+            self.fieldlistView.setCurrentRow(i)
+        else:
+            self.fieldlistView.clearSelection()
 
-    def asdf(self):
-        print("dfsaasdfafsd")
+
+    def updateList(self):
+        self.fieldlistView.model().removeRows(0, self.fieldlistView.model().rowCount())
+        for field in self.registerLayout.fields:
+            self.fieldlistView.addItem(field[0])
+
+    def changedSelected(self):
+        if len(self.fieldlistView.selectedIndexes()):
+            self.registerLayout.setSelected(self.fieldlistView.selectedIndexes()[0].row())
 
     def resizeEvent(self, e):
         self.registerLayout.resize(
