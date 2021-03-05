@@ -8,17 +8,17 @@ class _RegisterLayout(QtWidgets.QWidget):
     selected = QtCore.pyqtSignal()
 
     # Key value store of the fields. First item is bitStart, second item is bitEnd
-    fields = {
-        "Field1": [1,2],
-        "Field2": [3,4],
-        "Field3": [6,12],
-        "Field4": [12, 50]
-    }
+    fields =  [
+        ["Field1", 1,2],
+        ["Field2", 3,4],
+        ["Field3", 6,12],
+        ["Field4", 12, 50]
+    ]
 
     overlapping = {}
     selected = None
 
-    # Keys of fields with list of splitfields with a list of:
+    # Key of fields with list of splitfields with a list of:
     # #Row, #ColumnStart, #ColumnEnd, #BitStart # BitEnd #StartHandle, #EndHandle, Overlapping
     splitFields = {}
 
@@ -31,33 +31,36 @@ class _RegisterLayout(QtWidgets.QWidget):
     nrows = 0
 
     def calculateOverlapping(self):
-        for name, field in self.fields.items():
+        self.overlapping = {}
+        for i, field in enumerate(self.fields):
             overlapped = False
-            ran = range(field[0], field[1] + 1)
-            for name2, field2 in self.fields.items():
-                if name == name2: #Same element, ignore and continue searching
+            ran = range(field[1], field[2] + 1)
+            name = field[0]
+            for j, field2 in enumerate(self.fields):
+                if i == j: #Same element, ignore and continue searching
                     continue
 
                 # Find if start element or stop element is inside the range
-                if field2[0] in ran or field2[1] in ran:
+                if field2[1] in ran or field2[2] in ran:
                     overlapped = True
                     break
 
-            self.overlapping[name] = overlapped
+            self.overlapping[i] = overlapped
 
     def updateSplitFields(self):
         self.calculateOverlapping()
         self.splitFields = {}
 
-        for name, field in self.fields.items():
-            columnstart = field[0] % self.bitwidth
-            rowstart = field[0] // self.bitwidth
+        for i, field in enumerate(self.fields):
+            name = field[0]
+            columnstart = field[1] % self.bitwidth
+            rowstart = field[1] // self.bitwidth
 
-            columnend = field[1] % self.bitwidth
-            rowstop = field[1] // self.bitwidth
+            columnend = field[2] % self.bitwidth
+            rowstop = field[2] // self.bitwidth
 
             row = rowstart
-            self.splitFields[name] = []
+            self.splitFields[i] = []
 
             bitstart = 0
             bitend = 0
@@ -83,7 +86,7 @@ class _RegisterLayout(QtWidgets.QWidget):
                 width = end - start
                 bitend = bitstart + width
 
-                self.splitFields[name].append(
+                self.splitFields[i].append(
                     [row,start, end, bitstart, bitend, LeftHandle, RightHandle]
                 )
 
@@ -161,9 +164,12 @@ class _RegisterLayout(QtWidgets.QWidget):
             )
             painter.fillRect(rect, brush)
 
+        self.rectFields = {}
+
         #Fields
-        for name,splitFields in self.splitFields.items():
-            self.rectFields[name] = []
+        for i, splitFields in self.splitFields.items():
+            name = self.fields[i][0]
+            self.rectFields[i] = []
             for field in splitFields:
 
                 row = field[0]
@@ -179,7 +185,7 @@ class _RegisterLayout(QtWidgets.QWidget):
                 start = min(x1, x2)
                 width = abs(x1-x2) + 1
 
-                if self.overlapping[name]: #Overlapping
+                if self.overlapping[i]: #Overlapping
                     brush.setColor(QtGui.QColor(0xEF, 0x83, 0x54 ,128))
                 else:
                     brush.setColor(QtGui.QColor(0xEF, 0x83, 0x54, 255))
@@ -191,16 +197,15 @@ class _RegisterLayout(QtWidgets.QWidget):
                            self.height_bitbox - 4                         #H
                        )
 
-                self.rectFields[name].append(rect)
+                self.rectFields[i].append(rect)
 
                 painter.fillRect(rect, brush)
 
                 #Handles
-                if self.selected == name:
+                if self.selected == i:
                     brush.setColor(QtGui.QColor(0,0,0))
                 else:
                     brush.setColor(QtGui.QColor(70,70,70))
-
 
                 if self.HorizontalMSB:
                     leftHandle = field[6]
@@ -219,9 +224,9 @@ class _RegisterLayout(QtWidgets.QWidget):
                     )
                     painter.fillRect(handlerect, brush)
                     if not self.HorizontalMSB:
-                        self.rectStartHandles[name] = handlerect
+                        self.rectStartHandles[i] = handlerect
                     else:
-                        self.rectStopHandles[name] = handlerect
+                        self.rectStopHandles[i] = handlerect
 
                 if rightHandle:
 
@@ -235,13 +240,13 @@ class _RegisterLayout(QtWidgets.QWidget):
                     painter.fillRect(handlerect, brush)
 
                     if self.HorizontalMSB:
-                        self.rectStartHandles[name] = handlerect
+                        self.rectStartHandles[i] = handlerect
                     else:
-                        self.rectStopHandles[name] = handlerect
+                        self.rectStopHandles[i] = handlerect
 
 
                 font = painter.font()
-                if self.selected == name:
+                if self.selected == i:
                     font.setBold(True)
                     painter.setFont(font)
 
@@ -285,22 +290,22 @@ class _RegisterLayout(QtWidgets.QWidget):
         self.update()
 
     def mouseMoveEvent(self, e):
-        if self.dragging:
+        if self.dragging is not None:
             row, column = self.PosToField(e.x(), e.y())
             #print(row,column)
             displacement = int((column - self.draggingOriginColumn) + (row - self.draggingOriginRow)*self.bitwidth)
 
-            start = self.fields[self.dragging][0]
-            stop = self.fields[self.dragging][1]
+            start = self.fields[self.dragging][1]
+            stop = self.fields[self.dragging][2]
 
             if self.dragMove or self.dragStartHandle:
-                start = self.draggingOriginal[0] + displacement
+                start = self.draggingOriginal[1] + displacement
 
             if self.dragMove or self.dragStopHandle:
-                stop = self.draggingOriginal[1] + displacement
+                stop = self.draggingOriginal[2] + displacement
 
-            self.fields[self.dragging][0] = min(start,stop)
-            self.fields[self.dragging][1] = max(start, stop)
+            self.fields[self.dragging][1] = min(start,stop)
+            self.fields[self.dragging][2] = max(start, stop)
 
         self.update()
 
@@ -322,14 +327,15 @@ class _RegisterLayout(QtWidgets.QWidget):
     def mousePressEvent(self, e):
         pos = e.pos()
         self.draggingOriginRow,self.draggingOriginColumn = self.PosToField(pos.x(), pos.y())
-
+        print(pos)
         found = False
-        for name, rects in self.rectFields.items():
+        for i, rects in self.rectFields.items():
             if found: break
             for rect in rects:
                 if rect.contains(pos):
-                    self.selected = name
-                    self.dragging = name
+                    name = self.fields[i][0]
+                    self.selected = i
+                    self.dragging = i
                     self.dragMove = True
                     found = True
                     break
@@ -340,28 +346,28 @@ class _RegisterLayout(QtWidgets.QWidget):
         if found:
             #Seach for start and stop handle
             found = False
-            for name, rect in self.rectStartHandles.items():
+            for i, rect in self.rectStartHandles.items():
                 if rect.contains(pos):
-                    self.selected = name
-                    self.dragging = name
+                    name = self.fields[i][0]
+                    self.selected = i
+                    self.dragging = i
                     self.dragMove = False
                     self.dragStartHandle = True
                     found = True
                     break
 
             if not found:
-                for name, rect in self.rectStopHandles.items():
+                for i, rect in self.rectStopHandles.items():
                     if rect.contains(pos):
-                        self.selected = name
-                        self.dragging = name
+                        name = self.fields[i][0]
+                        self.selected = i
+                        self.dragging = i
                         self.dragMove = False
                         self.dragStopHandle = True
                         break
 
-        if self.selected:
+        if self.selected is not None:
             self.draggingOriginal = self.fields[self.selected].copy()
-            #self.draggingOriginal = [1,2]
-
 
         self.update()
 
@@ -435,7 +441,8 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.updateList()
 
     def updateList(self):
-        self.fieldlistView.addItems(self.registerLayout.fields)
+        #self.fieldlistView.addItems(self.registerLayout.fields)
+        pass
 
     def asdf(self):
         print("dfsaasdfafsd")
