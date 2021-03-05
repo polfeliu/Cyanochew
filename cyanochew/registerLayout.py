@@ -374,7 +374,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        layout = QtWidgets.QVBoxLayout()
+        layout = QtWidgets.QHBoxLayout()
 
         self.registerLayout = _RegisterLayout()
         self.scroll = QtWidgets.QScrollArea()
@@ -386,6 +386,51 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.scroll.setWidget(self.registerLayout)
 
         layout.addWidget(self.scroll)
+
+        self.sideBar = QtWidgets.QVBoxLayout()
+
+        self.selectedLabel = QtWidgets.QLabel("Select Field")
+        self.selectedLabel.setAlignment(QtCore.Qt.AlignCenter)
+        font = QtGui.QFont()
+        font.setPointSize(11)
+        self.selectedLabel.setFont(font)
+        self.sideBar.addWidget(self.selectedLabel)
+
+        startLabel = QtWidgets.QLabel("Start")
+        startLabel.setContentsMargins(0,10,0,0)
+        self.sideBar.addWidget(startLabel)
+        self.spinStart = QtWidgets.QSpinBox()
+        self.spinStart.setEnabled(False)
+        self.spinStart.setMinimumSize(QtCore.QSize(0, 40))
+        self.sideBar.addWidget(self.spinStart)
+
+        endLabel = QtWidgets.QLabel("End")
+        endLabel.setContentsMargins(0, 10, 0, 0)
+        self.sideBar.addWidget(endLabel)
+        self.spinEnd = QtWidgets.QSpinBox()
+        self.spinEnd.setEnabled(False)
+        self.spinEnd.setMinimumSize(QtCore.QSize(0, 40))
+        self.sideBar.addWidget(self.spinEnd)
+
+        widthLabel = QtWidgets.QLabel("Width")
+        widthLabel.setContentsMargins(0, 10, 0, 0)
+        self.sideBar.addWidget(widthLabel)
+        self.spinWidth = QtWidgets.QSpinBox()
+        self.spinWidth.setEnabled(False)
+        self.spinWidth.setMinimumSize(QtCore.QSize(0, 40))
+        self.sideBar.addWidget(self.spinWidth)
+
+
+        spacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.sideBar.addSpacerItem(spacer)
+
+        self.fieldlistView = QtWidgets.QListView()
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        self.fieldlistView.setSizePolicy(sizePolicy)
+
+        self.sideBar.addWidget(self.fieldlistView)
+
+        layout.addLayout(self.sideBar)
 
         self.setLayout(layout)
 
