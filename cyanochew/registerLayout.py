@@ -453,7 +453,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
 
         leftLayout.addLayout(viewSettings)
 
-        layout.addLayout(leftLayout)
+        layout.addLayout(leftLayout,1) # stretch 1 so it expands
 
         self.sideBar = QtWidgets.QVBoxLayout()
 
@@ -516,6 +516,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
 
     def focusName(self):
         self.selectedName.setFocus()
+        self.selectedName.selectAll()
 
 
     def updateName(self):
@@ -524,6 +525,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
                 self.registerLayout.selected
             ][0] = self.selectedName.text()
             self.registerLayout.update()
+            self.updateList()
 
     def updateBitWidth(self):
         self.registerLayout.bitwidth = self.bitwidthSpin.value()
@@ -590,6 +592,9 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.fieldlistView.model().removeRows(0, self.fieldlistView.model().rowCount())
         for field in self.registerLayout.fields:
             self.fieldlistView.addItem(field[0])
+
+        self.changedSelected()
+
 
     def changedSelected(self):
         if len(self.fieldlistView.selectedIndexes()):
