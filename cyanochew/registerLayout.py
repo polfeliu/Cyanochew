@@ -25,7 +25,7 @@ class _RegisterLayout(QtWidgets.QWidget):
 
     rectFields = {}
     rectStartHandles = {}
-    rectStopHandles = {}
+    rectEndHandles = {}
 
     bitwidth = 8
 
@@ -41,7 +41,7 @@ class _RegisterLayout(QtWidgets.QWidget):
                 if i == j: #Same element, ignore and continue searching
                     continue
 
-                # Find if start element or stop element is inside the range
+                # Find if start element or end element is inside the range
                 if field2[1] in ran or field2[2] in ran:
                     overlapped = True
                     break
@@ -58,7 +58,7 @@ class _RegisterLayout(QtWidgets.QWidget):
             rowstart = field[1] // self.bitwidth
 
             columnend = field[2] % self.bitwidth
-            rowstop = field[2] // self.bitwidth
+            rowend = field[2] // self.bitwidth
 
             row = rowstart
             self.splitFields[i] = []
@@ -66,7 +66,7 @@ class _RegisterLayout(QtWidgets.QWidget):
             bitstart = 0
             bitend = 0
 
-            while row <= rowstop:
+            while row <= rowend:
                 #Not the first row: Expand Left to the start
                 if row != rowstart:
                     start = 0
@@ -76,7 +76,7 @@ class _RegisterLayout(QtWidgets.QWidget):
                     LeftHandle = True
 
                 #Not the last row: Expand Right to the end
-                if row != rowstop:
+                if row != rowend:
                     end = self.bitwidth - 1
                     RightHandle = False
                 else:
@@ -100,7 +100,6 @@ class _RegisterLayout(QtWidgets.QWidget):
                         self.size().width(),
                         self._padding + self.nrows * self.height_bitbox +2
                     )
-
 
 
     HorizontalMSB = True
@@ -176,12 +175,12 @@ class _RegisterLayout(QtWidgets.QWidget):
                 row = field[0]
 
                 columnstart = field[1]
-                columnstop = field[2]
+                columnend = field[2]
                 bitstart = field[3]
-                bitstop = field[4]
+                bitend = field[4]
     
                 row, x1 = self.translateField(row, columnstart)
-                _, x2 = self.translateField(row, columnstop)
+                _, x2 = self.translateField(row, columnend)
 
                 start = min(x1, x2)
                 width = abs(x1-x2) + 1
@@ -227,7 +226,7 @@ class _RegisterLayout(QtWidgets.QWidget):
                     if not self.HorizontalMSB:
                         self.rectStartHandles[i] = handlerect
                     else:
-                        self.rectStopHandles[i] = handlerect
+                        self.rectEndHandles[i] = handlerect
 
                 if rightHandle:
 
@@ -243,7 +242,7 @@ class _RegisterLayout(QtWidgets.QWidget):
                     if self.HorizontalMSB:
                         self.rectStartHandles[i] = handlerect
                     else:
-                        self.rectStopHandles[i] = handlerect
+                        self.rectEndHandles[i] = handlerect
 
 
                 font = painter.font()
@@ -253,7 +252,7 @@ class _RegisterLayout(QtWidgets.QWidget):
 
                 painter.drawText(
                     rect, Qt.AlignCenter,
-                    "%s\r\n[%i:%i]" % (name, bitstop, bitstart)
+                    "%s\r\n[%i:%i]" % (name, bitend, bitstart)
                 )
 
                 font.setBold(False)
@@ -301,12 +300,17 @@ class _RegisterLayout(QtWidgets.QWidget):
 
             if self.dragMove or self.dragStartHandle:
                 start = self.draggingOriginal[1] + displacement
+                start = max(0,start)
 
-            if self.dragMove or self.dragStopHandle:
+            if self.dragMove or self.dragEndHandle:
                 end = self.draggingOriginal[2] + displacement
+                end = max(0,end)
 
             self.changeFieldData(start,end)
             self.UpdatedData.emit()
+
+            from pprint import pprint
+            pprint(self.fields)
 
         self.update()
 
@@ -319,7 +323,7 @@ class _RegisterLayout(QtWidgets.QWidget):
         self.dragging = None
         self.dragMove = False
         self.dragStartHandle = False
-        self.dragStopHandle = False
+        self.dragEndHandle = False
         self.update()
 
     dragging = None
@@ -327,7 +331,7 @@ class _RegisterLayout(QtWidgets.QWidget):
     draggingOriginColumn = None
     dragMove = False
     dragStartHandle = False
-    dragStopHandle = False
+    dragEndHandle = False
     draggingOriginal = None
 
     def mousePressEvent(self, e):
@@ -350,7 +354,7 @@ class _RegisterLayout(QtWidgets.QWidget):
             self.selected=None
 
         if found:
-            #Seach for start and stop handle
+            #Seach for start and end handle
             found = False
             for i, rect in self.rectStartHandles.items():
                 if rect.contains(pos):
@@ -363,13 +367,13 @@ class _RegisterLayout(QtWidgets.QWidget):
                     break
 
             if not found:
-                for i, rect in self.rectStopHandles.items():
+                for i, rect in self.rectEndHandles.items():
                     if rect.contains(pos):
                         name = self.fields[i][0]
                         self.selected = i
                         self.dragging = i
                         self.dragMove = False
-                        self.dragStopHandle = True
+                        self.dragEndHandle = True
                         break
 
         if self.selected is not None:
