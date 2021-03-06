@@ -403,7 +403,40 @@ class RegisterLayoutView(QtWidgets.QWidget):
 
         self.scroll.setWidget(self.registerLayout)
 
-        layout.addWidget(self.scroll)
+        leftLayout = QtWidgets.QVBoxLayout()
+        leftLayout.addWidget(self.scroll)
+
+        ByteOrderLayout = QtWidgets.QHBoxLayout()
+
+        ByteOrderHorizontalGroup = QtWidgets.QGroupBox("Horizontal Bit Order")
+        ByteOrderHorizontalLayout = QtWidgets.QVBoxLayout()
+        ByteOrderHorizontalGroup.setLayout(ByteOrderHorizontalLayout)
+        self.RadioHorizontalMSB = QtWidgets.QRadioButton("MSB")
+        self.RadioHorizontalMSB.clicked.connect(self.updateByteOrder)
+        self.RadioHorizontalMSB.setChecked(True)
+        self.RadioHorizontalLSB = QtWidgets.QRadioButton("LSB")
+        self.RadioHorizontalLSB.clicked.connect(self.updateByteOrder)
+        ByteOrderHorizontalLayout.addWidget(self.RadioHorizontalMSB)
+        ByteOrderHorizontalLayout.addWidget(self.RadioHorizontalLSB)
+        ByteOrderLayout.addWidget(ByteOrderHorizontalGroup)
+
+        ByteOrderVerticalGroup = QtWidgets.QGroupBox("Vertical Bit Order")
+        ByteOrderVerticalLayout = QtWidgets.QVBoxLayout()
+        ByteOrderVerticalGroup.setLayout(ByteOrderVerticalLayout)
+        self.RadioVerticalMSB = QtWidgets.QRadioButton("MSB")
+        self.RadioVerticalMSB.clicked.connect(self.updateByteOrder)
+        self.RadioVerticalMSB.setChecked(True)
+        self.RadioVerticalLSB = QtWidgets.QRadioButton("LSB")
+        self.RadioVerticalLSB.clicked.connect(self.updateByteOrder)
+        ByteOrderVerticalLayout.addWidget(self.RadioVerticalMSB)
+        ByteOrderVerticalLayout.addWidget(self.RadioVerticalLSB)
+        ByteOrderLayout.addWidget(ByteOrderVerticalGroup)
+
+        self.updateByteOrder()
+
+        leftLayout.addLayout(ByteOrderLayout)
+
+        layout.addLayout(leftLayout)
 
         self.sideBar = QtWidgets.QVBoxLayout()
 
@@ -459,6 +492,19 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.setLayout(layout)
 
         self.updateList()
+
+    def updateByteOrder(self):
+        if self.RadioVerticalMSB.isChecked():
+            self.registerLayout.VerticalMSB = True
+        else:
+            self.registerLayout.VerticalMSB = False
+
+        if self.RadioHorizontalMSB.isChecked():
+            self.registerLayout.HorizontalMSB = True
+        else:
+            self.registerLayout.HorizontalMSB = False
+
+        self.registerLayout.update()
 
     def updateSelected(self, i):
         if i is not None:
