@@ -526,6 +526,8 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.registerLayout.fields.pop(
             self.registerLayout.selected
         )
+        self.registerLayout.selected = None
+        self.fieldlistView.clearSelection()
         self.registerLayout.update()
         self.updateList()
 
@@ -616,8 +618,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
         for field in self.registerLayout.fields:
             self.fieldlistView.addItem(field[0])
 
-        self.changedSelected()
-
+        self.updateSelected(self.registerLayout.selected)
 
     def changedSelected(self):
         if len(self.fieldlistView.selectedIndexes()):
