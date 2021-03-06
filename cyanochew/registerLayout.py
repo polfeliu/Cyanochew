@@ -7,6 +7,7 @@ class _RegisterLayout(QtWidgets.QWidget):
 
     SelectedSignal = QtCore.pyqtSignal(object)
     UpdatedData = QtCore.pyqtSignal()
+    DoubleClickField = QtCore.pyqtSignal()
 
     # Key value store of the fields. First item is bitStart, second item is bitEnd
     fields =  [
@@ -379,6 +380,10 @@ class _RegisterLayout(QtWidgets.QWidget):
         self.SelectedSignal.emit(self.selected)
         self.update()
 
+    def mouseDoubleClickEvent(self, e):
+        if self.selected is not None:
+            self.DoubleClickField.emit()
+
     def setSelected(self, index):
         self.selected = index
         self.update()
@@ -406,46 +411,61 @@ class RegisterLayoutView(QtWidgets.QWidget):
         leftLayout = QtWidgets.QVBoxLayout()
         leftLayout.addWidget(self.scroll)
 
-        ByteOrderLayout = QtWidgets.QHBoxLayout()
+        viewSettings = QtWidgets.QHBoxLayout()
 
-        ByteOrderHorizontalGroup = QtWidgets.QGroupBox("Horizontal Bit Order")
-        ByteOrderHorizontalLayout = QtWidgets.QVBoxLayout()
-        ByteOrderHorizontalGroup.setLayout(ByteOrderHorizontalLayout)
+        byteOrderHorizontalGroup = QtWidgets.QGroupBox("Horizontal Bit Order")
+        byteOrderHorizontalLayout = QtWidgets.QVBoxLayout()
+        byteOrderHorizontalGroup.setLayout(byteOrderHorizontalLayout)
         self.RadioHorizontalMSB = QtWidgets.QRadioButton("MSB")
         self.RadioHorizontalMSB.clicked.connect(self.updateByteOrder)
         self.RadioHorizontalMSB.setChecked(True)
         self.RadioHorizontalLSB = QtWidgets.QRadioButton("LSB")
         self.RadioHorizontalLSB.clicked.connect(self.updateByteOrder)
-        ByteOrderHorizontalLayout.addWidget(self.RadioHorizontalMSB)
-        ByteOrderHorizontalLayout.addWidget(self.RadioHorizontalLSB)
-        ByteOrderLayout.addWidget(ByteOrderHorizontalGroup)
+        byteOrderHorizontalLayout.addWidget(self.RadioHorizontalMSB)
+        byteOrderHorizontalLayout.addWidget(self.RadioHorizontalLSB)
+        viewSettings.addWidget(byteOrderHorizontalGroup)
 
-        ByteOrderVerticalGroup = QtWidgets.QGroupBox("Vertical Bit Order")
-        ByteOrderVerticalLayout = QtWidgets.QVBoxLayout()
-        ByteOrderVerticalGroup.setLayout(ByteOrderVerticalLayout)
+        byteOrderVerticalGroup = QtWidgets.QGroupBox("Vertical Bit Order")
+        byteOrderVerticalLayout = QtWidgets.QVBoxLayout()
+        byteOrderVerticalGroup.setLayout(byteOrderVerticalLayout)
         self.RadioVerticalMSB = QtWidgets.QRadioButton("MSB")
         self.RadioVerticalMSB.clicked.connect(self.updateByteOrder)
         self.RadioVerticalMSB.setChecked(True)
         self.RadioVerticalLSB = QtWidgets.QRadioButton("LSB")
         self.RadioVerticalLSB.clicked.connect(self.updateByteOrder)
-        ByteOrderVerticalLayout.addWidget(self.RadioVerticalMSB)
-        ByteOrderVerticalLayout.addWidget(self.RadioVerticalLSB)
-        ByteOrderLayout.addWidget(ByteOrderVerticalGroup)
+        byteOrderVerticalLayout.addWidget(self.RadioVerticalMSB)
+        byteOrderVerticalLayout.addWidget(self.RadioVerticalLSB)
+        viewSettings.addWidget(byteOrderVerticalGroup)
 
         self.updateByteOrder()
 
-        leftLayout.addLayout(ByteOrderLayout)
+        bitwidthGroup = QtWidgets.QGroupBox("Bit Width")
+        bitwidthLayout = QtWidgets.QVBoxLayout()
+        bitwidthGroup.setLayout(bitwidthLayout)
+        self.bitwidthSpin = QtWidgets.QSpinBox()
+        self.bitwidthSpin.setMinimumHeight(30)
+        self.bitwidthSpin.setMinimum(1)
+        self.bitwidthSpin.setValue(8)
+        self.bitwidthSpin.valueChanged.connect(self.updateBitWidth)
+        bitwidthLayout.addWidget(self.bitwidthSpin)
+        viewSettings.addWidget(bitwidthGroup)
+        self.updateBitWidth()
+
+        leftLayout.addLayout(viewSettings)
 
         layout.addLayout(leftLayout)
 
         self.sideBar = QtWidgets.QVBoxLayout()
 
-        self.selectedLabel = QtWidgets.QLabel("Select Field")
-        self.selectedLabel.setAlignment(QtCore.Qt.AlignCenter)
+        self.selectedName = QtWidgets.QLineEdit("")
+        self.selectedName.setAlignment(QtCore.Qt.AlignCenter)
         font = QtGui.QFont()
         font.setPointSize(11)
-        self.selectedLabel.setFont(font)
-        self.sideBar.addWidget(self.selectedLabel)
+        self.selectedName.setFont(font)
+        self.selectedName.textChanged.connect(self.updateName)
+        self.sideBar.addWidget(self.selectedName)
+
+        self.registerLayout.DoubleClickField.connect(self.focusName)
 
         startLabel = QtWidgets.QLabel("Start")
         startLabel.setContentsMargins(0,10,0,0)
@@ -485,6 +505,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
         self.fieldlistView.setSizePolicy(sizePolicy)
         self.fieldlistView.itemSelectionChanged.connect(self.changedSelected)
+        self.fieldlistView.itemDoubleClicked.connect(self.focusName)
         self.sideBar.addWidget(self.fieldlistView)
 
         layout.addLayout(self.sideBar)
@@ -492,6 +513,22 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.setLayout(layout)
 
         self.updateList()
+
+    def focusName(self):
+        self.selectedName.setFocus()
+
+
+    def updateName(self):
+        if self.registerLayout.selected is not None:
+            self.registerLayout.fields[
+                self.registerLayout.selected
+            ][0] = self.selectedName.text()
+            self.registerLayout.update()
+
+    def updateBitWidth(self):
+        self.registerLayout.bitwidth = self.bitwidthSpin.value()
+        self.registerLayout.update()
+
 
     def updateByteOrder(self):
         if self.RadioVerticalMSB.isChecked():
@@ -512,14 +549,14 @@ class RegisterLayoutView(QtWidgets.QWidget):
             self.spinStart.setEnabled(True)
             self.spinEnd.setEnabled(True)
             self.spinWidth.setEnabled(True)
-            self.selectedLabel.setText(self.registerLayout.fields[i][0])
+            self.selectedName.setText(self.registerLayout.fields[i][0])
             self.updatedData()
         else:
             self.fieldlistView.clearSelection()
             self.spinStart.setEnabled(False)
             self.spinEnd.setEnabled(False)
             self.spinWidth.setEnabled(False)
-            self.selectedLabel.setText("Select Field")
+            self.selectedName.setText("Select Field")
 
     def updatedData(self):
         start = self.registerLayout.fields[self.registerLayout.selected][1]
