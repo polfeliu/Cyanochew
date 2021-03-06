@@ -9,7 +9,7 @@ class _RegisterLayout(QtWidgets.QWidget):
     UpdatedData = QtCore.pyqtSignal()
     DoubleClickField = QtCore.pyqtSignal()
 
-    # Key value store of the fields. First item is bitStart, second item is bitEnd
+    # List of fields. Name, bitStart, bitEnd
     fields =  [
         ["Field1", 1,2],
         ["Field2", 3,4],
@@ -309,7 +309,6 @@ class _RegisterLayout(QtWidgets.QWidget):
             self.changeFieldData(start,end)
             self.UpdatedData.emit()
 
-
         self.update()
 
     def changeFieldData(self,start,end):
@@ -383,6 +382,15 @@ class _RegisterLayout(QtWidgets.QWidget):
     def mouseDoubleClickEvent(self, e):
         if self.selected is not None:
             self.DoubleClickField.emit()
+        else:
+            row, column = self.PosToField(e.x(), e.y())
+            pos = int(column + row * self.bitwidth)
+            self.fields.append(["New Field", pos,pos])
+            self.selected = len(self.fields) - 1
+            self.SelectedSignal.emit(self.selected)
+            self.update()
+
+
 
     def setSelected(self, index):
         self.selected = index
@@ -514,6 +522,17 @@ class RegisterLayoutView(QtWidgets.QWidget):
 
         self.updateList()
 
+    def deleteSelectedField(self):
+        self.registerLayout.fields.pop(
+            self.registerLayout.selected
+        )
+        self.registerLayout.update()
+        self.updateList()
+
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Delete:
+            self.deleteSelectedField()
+
     def focusName(self):
         self.selectedName.setFocus()
         self.selectedName.selectAll()
@@ -561,32 +580,36 @@ class RegisterLayoutView(QtWidgets.QWidget):
             self.selectedName.setText("Select Field")
 
     def updatedData(self):
-        start = self.registerLayout.fields[self.registerLayout.selected][1]
-        end = self.registerLayout.fields[self.registerLayout.selected][2]
-        self.spinStart.setValue(start)
-        self.spinEnd.setValue(end)
-        self.spinWidth.setValue(end-start+1)
+        if self.registerLayout.selected is not None:
+            start = self.registerLayout.fields[self.registerLayout.selected][1]
+            end = self.registerLayout.fields[self.registerLayout.selected][2]
+            self.spinStart.setValue(start)
+            self.spinEnd.setValue(end)
+            self.spinWidth.setValue(end-start+1)
 
     def updateStartData(self):
-        self.registerLayout.changeFieldData(
-            self.spinStart.value(),
-            self.registerLayout.fields[self.registerLayout.selected][2]
-        )
-        self.updatedData()
-        self.registerLayout.update()
+        if self.registerLayout.selected is not None:
+            self.registerLayout.changeFieldData(
+                self.spinStart.value(),
+                self.registerLayout.fields[self.registerLayout.selected][2]
+            )
+            self.updatedData()
+            self.registerLayout.update()
 
     def updateEndData(self):
-        self.registerLayout.changeFieldData(
-            self.registerLayout.fields[self.registerLayout.selected][1],
-            self.spinEnd.value()
-        )
-        self.updatedData()
-        self.registerLayout.update()
+        if self.registerLayout.selected is not None:
+            self.registerLayout.changeFieldData(
+                self.registerLayout.fields[self.registerLayout.selected][1],
+                self.spinEnd.value()
+            )
+            self.updatedData()
+            self.registerLayout.update()
 
     def updateWidthData(self):
-        self.spinEnd.setValue(
-            self.spinStart.value() + self.spinWidth.value() - 1
-        )
+        if self.registerLayout.selected is not None:
+            self.spinEnd.setValue(
+                self.spinStart.value() + self.spinWidth.value() - 1
+            )
 
     def updateList(self):
         self.fieldlistView.model().removeRows(0, self.fieldlistView.model().rowCount())
