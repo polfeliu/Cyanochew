@@ -6,6 +6,7 @@ from PyQt5.QtCore import Qt
 class _RegisterLayout(QtWidgets.QWidget):
 
     SelectedSignal = QtCore.pyqtSignal(object)
+    UpdatedData = QtCore.pyqtSignal()
 
     # Key value store of the fields. First item is bitStart, second item is bitEnd
     fields =  [
@@ -296,18 +297,23 @@ class _RegisterLayout(QtWidgets.QWidget):
             displacement = int((column - self.draggingOriginColumn) + (row - self.draggingOriginRow)*self.bitwidth)
 
             start = self.fields[self.dragging][1]
-            stop = self.fields[self.dragging][2]
+            end = self.fields[self.dragging][2]
 
             if self.dragMove or self.dragStartHandle:
                 start = self.draggingOriginal[1] + displacement
 
             if self.dragMove or self.dragStopHandle:
-                stop = self.draggingOriginal[2] + displacement
+                end = self.draggingOriginal[2] + displacement
 
-            self.fields[self.dragging][1] = min(start,stop)
-            self.fields[self.dragging][2] = max(start, stop)
+            self.changeFieldData(start,end)
+            self.UpdatedData.emit()
 
         self.update()
+
+    def changeFieldData(self,start,end):
+        if self.selected is not None:
+            self.fields[self.selected][1] = min(start, end)
+            self.fields[self.selected][2] = max(start, end)
 
     def mouseReleaseEvent(self, e):
         self.dragging = None
@@ -386,6 +392,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
 
         self.registerLayout = _RegisterLayout()
         self.registerLayout.SelectedSignal.connect(self.updateSelected);
+        self.registerLayout.UpdatedData.connect(self.updatedData)
 
         self.scroll = QtWidgets.QScrollArea()
 
@@ -412,6 +419,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.spinStart = QtWidgets.QSpinBox()
         self.spinStart.setEnabled(False)
         self.spinStart.setMinimumSize(QtCore.QSize(0, 40))
+        self.spinStart.valueChanged.connect(self.updateStartData)
         self.sideBar.addWidget(self.spinStart)
 
         endLabel = QtWidgets.QLabel("End")
@@ -420,6 +428,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.spinEnd = QtWidgets.QSpinBox()
         self.spinEnd.setEnabled(False)
         self.spinEnd.setMinimumSize(QtCore.QSize(0, 40))
+        self.spinEnd.valueChanged.connect(self.updateEndData)
         self.sideBar.addWidget(self.spinEnd)
 
         widthLabel = QtWidgets.QLabel("Width")
@@ -428,6 +437,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.spinWidth = QtWidgets.QSpinBox()
         self.spinWidth.setEnabled(False)
         self.spinWidth.setMinimumSize(QtCore.QSize(0, 40))
+        self.spinWidth.valueChanged.connect(self.updateWidthData)
         self.sideBar.addWidget(self.spinWidth)
 
 
@@ -449,9 +459,45 @@ class RegisterLayoutView(QtWidgets.QWidget):
     def updateSelected(self, i):
         if i is not None:
             self.fieldlistView.setCurrentRow(i)
+            self.spinStart.setEnabled(True)
+            self.spinEnd.setEnabled(True)
+            self.spinWidth.setEnabled(True)
+            self.selectedLabel.setText(self.registerLayout.fields[i][0])
+            self.updatedData()
         else:
             self.fieldlistView.clearSelection()
+            self.spinStart.setEnabled(False)
+            self.spinEnd.setEnabled(False)
+            self.spinWidth.setEnabled(False)
+            self.selectedLabel.setText("Select Field")
 
+    def updatedData(self):
+        start = self.registerLayout.fields[self.registerLayout.selected][1]
+        end = self.registerLayout.fields[self.registerLayout.selected][2]
+        self.spinStart.setValue(start)
+        self.spinEnd.setValue(end)
+        self.spinWidth.setValue(end-start+1)
+
+    def updateStartData(self):
+        self.registerLayout.changeFieldData(
+            self.spinStart.value(),
+            self.registerLayout.fields[self.registerLayout.selected][2]
+        )
+        self.updatedData()
+        self.registerLayout.update()
+
+    def updateEndData(self):
+        self.registerLayout.changeFieldData(
+            self.registerLayout.fields[self.registerLayout.selected][1],
+            self.spinEnd.value()
+        )
+        self.updatedData()
+        self.registerLayout.update()
+
+    def updateWidthData(self):
+        self.spinEnd.setValue(
+            self.spinStart.value() + self.spinWidth.value() - 1
+        )
 
     def updateList(self):
         self.fieldlistView.model().removeRows(0, self.fieldlistView.model().rowCount())
@@ -460,7 +506,9 @@ class RegisterLayoutView(QtWidgets.QWidget):
 
     def changedSelected(self):
         if len(self.fieldlistView.selectedIndexes()):
-            self.registerLayout.setSelected(self.fieldlistView.selectedIndexes()[0].row())
+            i = self.fieldlistView.selectedIndexes()[0].row()
+            self.registerLayout.setSelected(i)
+            self.updateSelected(i)
 
     def resizeEvent(self, e):
         self.registerLayout.resize(
