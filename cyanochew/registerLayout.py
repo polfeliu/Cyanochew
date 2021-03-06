@@ -272,7 +272,6 @@ class _RegisterLayout(QtWidgets.QWidget):
 
 
     def PosToField(self, x,y):
-        #self.translateField()
         column = min((x - 2 - self._padding) // self.width_bitbox, self.bitwidth - 1)
         row = min((y - 2 - self._padding) // self.height_bitbox, self.nrows - 1)
 
@@ -309,8 +308,6 @@ class _RegisterLayout(QtWidgets.QWidget):
             self.changeFieldData(start,end)
             self.UpdatedData.emit()
 
-            from pprint import pprint
-            pprint(self.fields)
 
         self.update()
 
@@ -423,6 +420,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.spinStart = QtWidgets.QSpinBox()
         self.spinStart.setEnabled(False)
         self.spinStart.setMinimumSize(QtCore.QSize(0, 40))
+        self.spinStart.setMaximum(1000)
         self.spinStart.valueChanged.connect(self.updateStartData)
         self.sideBar.addWidget(self.spinStart)
 
@@ -432,6 +430,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.spinEnd = QtWidgets.QSpinBox()
         self.spinEnd.setEnabled(False)
         self.spinEnd.setMinimumSize(QtCore.QSize(0, 40))
+        self.spinEnd.setMaximum(1000)
         self.spinEnd.valueChanged.connect(self.updateEndData)
         self.sideBar.addWidget(self.spinEnd)
 
@@ -441,6 +440,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.spinWidth = QtWidgets.QSpinBox()
         self.spinWidth.setEnabled(False)
         self.spinWidth.setMinimumSize(QtCore.QSize(0, 40))
+        self.spinWidth.setMaximum(1000)
         self.spinWidth.valueChanged.connect(self.updateWidthData)
         self.sideBar.addWidget(self.spinWidth)
 
