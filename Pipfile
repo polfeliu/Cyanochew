@@ -5,7 +5,7 @@ name = "pypi"
 
 [packages]
 pyqt5 = "*"
-pyqt5-tools = "*"
+pyyaml = "*"
 
 [dev-packages]
 qt5-tools = "*"

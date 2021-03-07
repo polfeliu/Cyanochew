@@ -1,6 +1,7 @@
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
 from PyQt5.QtCore import Qt
 import json
+import sys
 
 from pprint import pprint
 
@@ -11,6 +12,9 @@ class Window(QtWidgets.QMainWindow):
     def __init__(self):
         super(Window, self).__init__()
         uic.loadUi("mainWindow.ui", self)
+
+        self.cyanobyteVersion = self.findChild(QtWidgets.QLabel, "cyanobyteVersion")
+        self.dataHandles["#/cyanobyte"] = self.cyanobyteVersion
 
         info = self.findChild(QtWidgets.QWidget, "Info")
         self.info = QtWidgets.QFormLayout()
@@ -44,9 +48,54 @@ class Window(QtWidgets.QMainWindow):
         self.Extensions = QtWidgets.QFormLayout()
         Extensions.setLayout(self.Extensions)
 
-
         self.loadPropertiesFromSchema()
         self.show()
+
+        self.loadYamlFile()
+
+    data = None
+
+    def loadYamlFile(self):
+        import yaml
+        with open('../test/peripherals/example.yaml') as f:
+            self.data = yaml.load(f, Loader=yaml.FullLoader)
+        self.dataToFields(self.data)
+
+    def dataToFields(self, data, baseaddress="#"):
+        for key, item in data.items():
+            address= f'{baseaddress}/{key}'
+            if isinstance(item, str):
+                self.safeSetField(address, item)
+            elif isinstance(item, dict):
+                self.dataToFields(item, address)
+            else:
+                print("Item ignored", address,item)
+
+    def safeSetField(self, address, value):
+        if address in self.dataHandles:
+            if isinstance(self.dataHandles[address], QtWidgets.QLabel):
+                self.dataHandles[address].setText(value)
+            elif isinstance(self.dataHandles[address], QtWidgets.QLineEdit):
+                self.dataHandles[address].setText(value)
+            elif isinstance(self.dataHandles[address], QtWidgets.QGroupBox):
+                subaddress = f'{address}.{value}'
+                self.dataHandles[subaddress].setChecked(True)
+            else:
+                print(value, type(self.dataHandles[address]))
+        else:
+            pass#print("This ui doesn't handle this parameter")
+
+    def readData(self, address):
+        for key in address.split('/'):
+            if key == "#":
+                unpack = self.data
+            else:
+                if key in unpack:
+                    unpack = unpack[key]
+                else:
+                    return None
+
+        return unpack
 
     def loadPropertiesFromSchema(self):
         with open('cyanobyte.schema.json') as f:
@@ -55,13 +104,13 @@ class Window(QtWidgets.QMainWindow):
         for group,groupdata in data['properties'].items():
             if group == "info":
                 for name, fielddata in groupdata['properties'].items():
-                    self.expandField(name, fielddata, self.info, "info")
+                    self.expandField(name, fielddata, self.info, "#/info")
             elif group == "i2c":
                 for name, fielddata in groupdata['properties'].items():
-                    self.expandField(name, fielddata, self.I2C, "I2C")
+                    self.expandField(name, fielddata, self.I2C, "#/i2c")
             elif group == "spi":
                 for name, fielddata in groupdata['properties'].items():
-                    self.expandField(name, fielddata, self.SPI, "SPI")
+                    self.expandField(name, fielddata, self.SPI, "#/spi")
             elif group == "registers":
                 self.loadRegisters()
             elif group == "fields":
@@ -74,8 +123,6 @@ class Window(QtWidgets.QMainWindow):
                 pass
             else:
                 print(group)
-
-        #pprint(self.dataHandles)
 
     def loadRegisters(self):
         pass
@@ -117,25 +164,23 @@ class Window(QtWidgets.QMainWindow):
         parent.addRow(name, groupbox)
 
     def createLineField(self, name, description,  obj, parent, basename):
-        handlename = f'{basename}.{name}'
-
         lineedit = QtWidgets.QLineEdit()
         lineedit.setToolTip(description)
-        self.dataHandles[handlename] = lineedit
+        self.dataHandles[basename] = lineedit
         parent.addRow(name, lineedit)
 
     def createSpinBoxField(self, name, description, obj, parent, basename, type='double'):
-        handlename = f'{basename}.{name}'
         if type == 'double':
             spinbox = QtWidgets.QDoubleSpinBox()
         elif type == 'integer':
             spinbox = QtWidgets.QSpinBox()
+        spinbox.setRange(0,1000000000)
         spinbox.setToolTip(description)
-        self.dataHandles[handlename] = spinbox
+        self.dataHandles[basename] = spinbox
         parent.addRow(name, spinbox)
 
     def expandField(self, name, obj, parent, basename):
-        handlename = f'{basename}.{name}'
+        handlename = f'{basename}/{name}'
 
         if 'description' in obj:
             description = obj['description']
@@ -161,14 +206,19 @@ class Window(QtWidgets.QMainWindow):
                         handlename
                     )
         elif 'type' not in obj or obj['type'] == 'string':
-            self.createLineField(name, description, obj, parent, handlename)
+            self.createLineField(
+                name,
+                description,
+                obj,
+                parent,
+                handlename)
         elif obj['type'] == 'number':
             self.createSpinBoxField(
                 name,
                 description,
                 obj,
                 parent,
-                basename,
+                handlename,
             )
         elif obj['type'] == 'integer':
             self.createSpinBoxField(
@@ -176,7 +226,7 @@ class Window(QtWidgets.QMainWindow):
                 description,
                 obj,
                 parent,
-                basename,
+                handlename,
                 type='integer'
             )
         elif obj['type'] == 'object':
