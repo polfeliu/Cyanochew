@@ -1,0 +1,236 @@
+{% macro params(input) -%}
+{% set args = namespace(index=0) %}
+{% for key,variable in input|dictsort %}
+{% if key != 'value' -%}
+{{- ", " if args.index > 0 -}}{{- key -}}
+{%- set args.index = args.index + 1 -%}
+{%- endif %}
+{%- endfor %}
+{%- endmacro %}
+
+{% macro variables(vars) -%}
+{% if vars %}
+{% for key,var in vars|dictsort %}
+        {{key | camel_to_snake}} = None # Variable declaration
+{% endfor %}
+{% endif %}
+{%- endmacro %}
+
+{% macro recursiveAssignLogic(logicalStep, keys) -%}
+{% for key in keys -%}
+{# Perform a recursive summation from an array of logical steps #}
+{% if key == 'sum' -%}
+    ({%- for step in logicalStep[key] -%}
+    {% if step is iterable and step is not string -%}
+    {{ recursiveAssignLogic(step, step.keys()) -}}
+    {%- else -%}
+    {{step | camel_to_snake}}
+    {%- endif %}
+    {{- "+" if not loop.last -}}
+    {%- endfor -%})
+{%- endif %}
+{# Perform a recursive difference from an array of logical steps #}
+{% if key == 'difference' -%}
+    ({%- for step in logicalStep[key] -%}
+    {% if step is iterable and step is not string -%}
+    {{ recursiveAssignLogic(step, step.keys()) -}}
+    {%- else -%}
+    {{step | camel_to_snake}}
+    {%- endif %}
+    {{- "-" if not loop.last -}}
+    {%- endfor -%})
+{%- endif %}
+{# Perform a recursive product from an array of logical steps #}
+{% if key == 'product' -%}
+    ({%- for step in logicalStep[key] -%}
+    {% if step is iterable and step is not string -%}
+    {{ recursiveAssignLogic(step, step.keys()) -}}
+    {%- else -%}
+    {{step | camel_to_snake}}
+    {%- endif %}
+    {{- "*" if not loop.last -}}
+    {%- endfor -%})
+{%- endif %}
+{# Perform a recursive division from an array of logical steps #}
+{% if key == 'division' -%}
+    ({%- for step in logicalStep[key] -%}
+    {% if step is iterable and step is not string -%}
+    {{ recursiveAssignLogic(step, step.keys()) -}}
+    {%- else -%}
+    {{ step | camel_to_snake }}
+    {%- endif %}
+    {{- "/" if not loop.last -}}
+    {%- endfor -%})
+{%- endif %}
+{# Perform a recursive modulus from an array of logical steps #}
+{% if key == 'modulus' -%}
+    ({%- for step in logicalStep[key] -%}
+    {% if step is iterable and step is not string -%}
+    {{ recursiveAssignLogic(step, step.keys()) -}}
+    {%- else -%}
+    {{ step | camel_to_snake }}
+    {%- endif %}
+    {{- "%" if not loop.last -}}
+    {%- endfor -%})
+{%- endif %}
+{# Perform a bitwise OR from an array of logical steps #}
+{% if key == 'bitwiseOr' -%}
+    ({%- for step in logicalStep[key] -%}
+    {% if step is iterable and step is not string -%}
+    {{ recursiveAssignLogic(step, step.keys()) -}}
+    {%- else -%}
+    {{step | camel_to_snake}}
+    {%- endif %}
+    {{- "|" if not loop.last -}}
+    {%- endfor -%})
+{%- endif %}
+{# Perform a bitwise AND from an array of logical steps #}
+{% if key == 'bitwiseAnd' -%}
+    ({%- for step in logicalStep[key] -%}
+    {% if step is iterable and step is not string -%}
+    {{ recursiveAssignLogic(step, step.keys()) -}}
+    {%- else -%}
+    {{step | camel_to_snake}}
+    {%- endif %}
+    {{- "&" if not loop.last -}}
+    {%- endfor -%})
+{%- endif %}
+{# Perform a power operation #}
+{% if key == 'power' -%}
+    math.pow({{logicalStep[key][0]}}, {{logicalStep[key][1]}})
+{%- endif %}
+{# Perform an arc tangent operation #}
+{% if key == 'arc tangent' -%}
+    math.atan({{logicalStep[key]}})
+{%- endif %}
+{# Bitwise ops #}
+{%- if key == 'bitShiftLeft' -%}
+    ({{logicalStep.var | camel_to_snake}} << {{logicalStep.bits}})
+{%- endif %}
+{%- if key == 'bitShiftRight' -%}
+    ({{logicalStep.var | camel_to_snake}} >> {{logicalStep.bits}})
+{%- endif %}
+{%- endfor %}
+{%- endmacro %}
+
+{% macro importStdLibs(fields, functions, i2c, template) %}
+{% if i2c.address is iterable and i2c.address is not string %}
+{# Optionally import class #}
+{% if template.enum is sameas false %}
+from enum import Enum
+{% set template.enum = true %}
+{% endif %}
+{% endif %}
+{% if fields %}
+{% for key,field in fields|dictsort %}
+{% if field.enum %}
+{# Optionally import class #}
+{% if template.enum is sameas false %}
+from enum import Enum
+{% set template.enum = true %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if functions %}
+{% for key,function in functions|dictsort %}
+{# Check if we need to import `math` lib #}
+{% for ckey,compute in function.computed|dictsort %}
+{% if compute.output == 'int16' %}
+{% if template.struct is sameas false %}
+import struct
+{% set template.struct = true %}
+{% endif %}
+{% endif %}
+{% macro scanForMathLib(logicKeys) -%}
+{% for logic in logicKeys %}
+{% if logic is mapping %}
+{% for logicKey in logic.keys() %}
+{% if logicKey == 'power' or logicKey == 'arc tangent' %}
+{% if template.math is sameas false %}
+import math
+{% set template.math = true %}
+{% endif %}
+{% elif logic[logicKey] is iterable and logic[logicKey] is not string -%}
+{{- scanForMathLib(logic[logicKey]) -}}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{%- endmacro %}
+{{- scanForMathLib(compute.logic) -}}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{%- endmacro %}
+
+{% macro importUstdLibs(fields, functions, template) %}
+{% if functions %}
+{% for key,function in functions|dictsort %}
+{# Check if we need to import `math` lib #}
+{% for ckey,compute in function.computed|dictsort %}
+{% if compute.output == 'int16' %}
+{% if template.struct is sameas false %}
+import ustruct
+{% set template.struct = true %}
+{% endif %}
+{% endif %}
+{% macro scanForMathLib(logicKeys) -%}
+{% for logic in logicKeys %}
+{% if logic is mapping %}
+{% for logicKey in logic.keys() %}
+{% if logicKey == 'power' or logicKey == 'arc tangent' %}
+{% if template.math is sameas false %}
+import math
+{% set template.math = true %}
+{% endif %}
+{% elif logic[logicKey] is iterable and logic[logicKey] is not string -%}
+{{- scanForMathLib(logic[logicKey]) -}}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{%- endmacro %}
+{{- scanForMathLib(compute.logic) -}}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{%- endmacro %}
+
+{% macro importLittleEndian(i2c) %}
+{% if i2c.endian == 'little' %}
+def _swap_endian(val, length):
+    """
+    Swap the endianness of a number
+    """
+    if length <= 8:
+        return val
+    if length <= 16:
+        return (val & 0xFF00) >> 8 | (val & 0xFF) << 8
+    if length <= 32:
+        return ((val & 0xFF000000) >> 24 |
+                (val & 0x00FF0000) >> 8 |
+                (val & 0x0000FF00) << 8 |
+                (val & 0x000000FF) << 24)
+    raise Exception('Cannot swap endianness for length ' + length)
+{% endif %}
+{%- endmacro %}
+
+{% macro importSign(registers, template) %}
+{# Add signing function if needed #}
+{% for key,register in registers|dictsort %}
+{% if register.signed %}
+{# Optionally import class #}
+{% if template.sign is sameas false %}
+def _sign(val, length):
+    """
+    Convert unsigned integer to signed integer
+    """
+    if val & (1 << (length - 1)):
+        return val - (1 << length)
+    return val
+{% set template.sign = true %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{%- endmacro %}

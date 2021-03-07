@@ -1,0 +1,204 @@
+{% set template = namespace(registersToFields=dict()) %}
+\documentclass[a4paper,12pt,oneside,pdflatex,italian,final,twocolumn]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{parallel}
+\usepackage{siunitx}
+\usepackage{booktabs}
+\usepackage{fancyhdr}
+
+\usepackage[export]{adjustbox}
+\usepackage[margin=0.5in]{geometry}
+\addtolength{\topmargin}{0in}
+
+\usepackage{libertine}
+\renewcommand*\familydefault{\sfdefault}  %% Only if the base font of the document is to be sans serif
+\usepackage[T1]{fontenc}
+
+\title{ {{ info.title }} }
+\author{ {{ info.contact.name }} }
+\date{ {{ info.copyright.date }} }
+
+\begin{document}
+
+\pagestyle{fancy}
+
+\lhead{ {{ info.contact.name }} }
+\chead { {{ info.copyright.date }} }
+\rhead{ {{ info.title }} v{{ info.version }} }
+
+
+\onecolumn
+
+
+\begin{figure}
+\begin{minipage}{0.47\textwidth}
+
+\section{Overview}
+    {{ info.description }}
+    \begin{itemize}
+        {% if i2c.address is iterable and i2c.address is not string %}
+        \item Device addresses:
+          {% for address in i2c.address %}
+          {{address}}{{ "," if not loop.last }}
+          {% endfor %}
+        {% else %}
+        \item Device address {{ i2c.address }}
+        {% endif %}
+        \item Address type {{ i2c.addressType }}
+        {% if i2c.endian == 'little' %}
+        \item Little Endian
+        {% endif %}
+    \end{itemize}
+
+
+\end{minipage}
+\hfill
+
+\end{figure}
+
+
+\section{Register Description}
+\begin{itemize}
+{% for key,register in registers|dictsort %}
+\item {{register.title}} - {{register.description}}
+{% endfor %}
+\end{itemize}
+
+\section{Technical specification}
+\centering
+\begin{tabular}{lcrr}
+\toprule
+ & Register Name & Register Address & Register Length \\
+\midrule
+{% for key,register in registers|dictsort %}
+{{key | regex_replace('_', '\_')}} & {{register.title}} & {{register.address}} & {{register.length}} \\
+{% endfor %}
+\bottomrule
+\end{tabular}
+
+{% if fields %}
+\raggedright
+
+{% if fields %}
+\section{Fields}
+
+{# Create a dictionary linking a register to its associated fields #}
+{# for hierarchical display #}
+{% for key,field in fields|dictsort %}
+{% set rkey = field.register %}
+{% if rkey in template.registersToFields %}
+{% set _dummy = field.update({ 'key': key }) %}
+{{- template.registersToFields[rkey].append(field) or "" -}}
+{% else %}
+{% set _dummy = field.update({ 'key': key }) %}
+{% set _dummy = template.registersToFields.update({ rkey: [] }) %}
+{{- template.registersToFields[rkey].append(field) or "" -}}
+{% endif %}
+{% endfor %}
+
+{% for key in template.registersToFields.keys() %}
+{% set register = template.registersToFields[key] %}
+
+\raggedright
+
+\subsection{Register {{key[12:]}}}
+{# Table #}
+\centering
+\begin{tabular}{lcr}
+\toprule
+  & Field Name & Bits \\
+\midrule
+{% for field in register %}
+{{field.key}} & {{field.title}} &
+{% if field.bitStart == field.bitEnd %}
+{{field.bitStart}}
+{% else %}
+{{field.bitStart}}:{{field.bitEnd}}
+{% endif %}
+\\
+{% endfor %}
+\bottomrule
+
+\end{tabular}
+
+{% for field in register %}
+{% if field.enum %}
+
+\raggedright
+
+\subsubsection{Field {{field.key}} }
+
+{{field.description}}
+
+\begin{itemize}
+{% for key,enum in field.enum|dictsort %}
+\item {{key | regex_replace('_', '\_')}} ({{enum.value}}) - {{enum.title}}
+{% endfor %}
+\end{itemize}
+
+{% endif %}
+{% endfor %}
+
+{% endfor %}
+{% endif %}
+
+{% endif %}
+
+{% if functions %}
+\raggedright
+
+\section{Functions}
+
+\centering
+\begin{tabular}{lc}
+\toprule
+  & Description \\
+\midrule
+{% for key,function in functions|dictsort %}
+{{key}} & {{function.description}} \\
+{% endfor %}
+\bottomrule
+\end{tabular}
+
+{% for key,function in functions|dictsort %}
+
+\raggedright
+\subsection{Function {{key}} }
+{{function.description}} \\
+
+\centering
+\begin{tabular}{lcr}
+\toprule
+  & Inputs & Return \\
+\midrule
+{% for ckey,compute in function.computed|dictsort %}
+{{ckey}} &
+{% if compute.input %}
+{% for ikey,input in compute.input|dictsort %}
+{{ikey}} ({{input}})
+{{ ", " if not loop.last }}
+{% endfor %}
+{% endif %}
+&
+{% if 'return' in compute and compute.return is not string %}
+{% for returnable in compute.return %}
+{{returnable}}{{ ", " if not loop.last }}
+{% endfor %}
+{% elif compute.return is string %}
+{{compute.return}}
+{% else %}
+void
+{% endif %}
+\\
+{% endfor %}
+\bottomrule
+\end{tabular}
+
+
+{% endfor %}
+
+\raggedright
+{% endif %}
+
+\end{document}
