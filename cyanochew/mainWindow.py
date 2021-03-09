@@ -22,10 +22,16 @@ class Window(QtWidgets.QMainWindow):
 
         I2C = self.findChild(QtWidgets.QWidget, "I2C")
         self.I2C = QtWidgets.QFormLayout()
+        self.I2CEnable = QtWidgets.QCheckBox("Enable")
+        self.I2CEnable.stateChanged.connect(self.enableI2C)
+        self.I2C.addRow("I2C", self.I2CEnable)
         I2C.setLayout(self.I2C)
 
         SPI = self.findChild(QtWidgets.QWidget, "SPI")
         self.SPI = QtWidgets.QFormLayout()
+        self.SPIEnable = QtWidgets.QCheckBox("Enable")
+        self.SPIEnable.stateChanged.connect(self.enableSPI)
+        self.SPI.addRow("SPI", self.SPIEnable)
         SPI.setLayout(self.SPI)
 
         Registers = self.findChild(QtWidgets.QWidget, "Registers")
@@ -48,28 +54,70 @@ class Window(QtWidgets.QMainWindow):
         self.Extensions = QtWidgets.QFormLayout()
         Extensions.setLayout(self.Extensions)
 
+        self.log = self.findChild(QtWidgets.QPlainTextEdit, "log")
+
         self.loadPropertiesFromSchema()
         self.show()
 
         self.loadYamlFile()
+        #self.reset()
 
     data = None
+
+    def addlog(self, msg):
+        self.log.appendPlainText(msg)
+
+    def reset(self):
+        for name, handle in self.dataHandles.items():
+            if isinstance(handle, QtWidgets.QGroupBox):
+                pass
+            elif isinstance(handle, QtWidgets.QCheckBox):
+                handle.setChecked(False)
+            elif isinstance(handle, QtWidgets.QRadioButton):
+                handle.setAutoExclusive(False)
+                handle.setChecked(False)
+                handle.setAutoExclusive(True)
+            else:
+                handle.clear()
+
+        self.enableSPI(False)
+        self.enableI2C(False)
 
     def loadYamlFile(self):
         import yaml
         with open('../test/peripherals/example.yaml') as f:
             self.data = yaml.load(f, Loader=yaml.FullLoader)
+
+        self.enableI2C('i2c' in self.data)
+        self.enableSPI('spi' in self.data)
+
         self.dataToFields(self.data)
+
+    def enableI2C(self, set):
+        self.I2CEnable.setChecked(set)
+        for name, handle in self.dataHandles.items():
+            if name.startswith("#/i2c/"):
+                handle.setEnabled(set)
+
+    def enableSPI(self, set):
+        self.SPIEnable.setChecked(set)
+        for name, handle in self.dataHandles.items():
+            if name.startswith("#/spi/"):
+                handle.setEnabled(set)
 
     def dataToFields(self, data, baseaddress="#"):
         for key, item in data.items():
             address= f'{baseaddress}/{key}'
             if isinstance(item, str):
                 self.safeSetField(address, item)
+            elif isinstance(item, int):
+                self.safeSetField(address, item)
             elif isinstance(item, dict):
                 self.dataToFields(item, address)
+            elif isinstance(item, list):
+                self.safeSetField(address, str(item).strip('[]'))
             else:
-                print("Item ignored", address,item)
+                self.addlog(f"Cannot Set field{address}")
 
     def safeSetField(self, address, value):
         if address in self.dataHandles:
@@ -80,10 +128,12 @@ class Window(QtWidgets.QMainWindow):
             elif isinstance(self.dataHandles[address], QtWidgets.QGroupBox):
                 subaddress = f'{address}.{value}'
                 self.dataHandles[subaddress].setChecked(True)
+            elif isinstance(self.dataHandles[address], QtWidgets.QSpinBox):
+                self.dataHandles[address].setValue(value)
             else:
-                print(value, type(self.dataHandles[address]))
+                self.addlog(f"cannot set field {address} of type type {self.dataHandles[address]}")
         else:
-            pass#print("This ui doesn't handle this parameter")
+            self.addlog(f"{address} doesn't exist in the UI")
 
     def readData(self, address):
         for key in address.split('/'):
@@ -188,6 +238,7 @@ class Window(QtWidgets.QMainWindow):
             description = ""
 
         if 'enum' in obj:
+
             self.createRadioField(
                 name,
                 description,
@@ -235,8 +286,7 @@ class Window(QtWidgets.QMainWindow):
             for childname, childfielddata in obj['properties'].items():
                 self.expandField(childname, childfielddata, form, handlename)
         else:
-            print(name + "##############################")
-            pprint(obj)
+            self.addlog(f"Cannot expand field {handlename} when loading the spec")
 
 
 app = QtWidgets.QApplication([])
