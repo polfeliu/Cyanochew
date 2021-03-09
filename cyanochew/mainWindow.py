@@ -108,7 +108,9 @@ class Window(QtWidgets.QMainWindow):
     def dataToFields(self, data, baseaddress="#"):
         for key, item in data.items():
             address= f'{baseaddress}/{key}'
-            if isinstance(item, str):
+            if address == "#/registers":
+                self.loadRegisters(item)
+            elif isinstance(item, str):
                 self.safeSetField(address, item)
             elif isinstance(item, int):
                 self.safeSetField(address, item)
@@ -118,6 +120,32 @@ class Window(QtWidgets.QMainWindow):
                 self.safeSetField(address, str(item).strip('[]'))
             else:
                 self.addlog(f"Cannot Set field{address}")
+
+    def loadRegisters(self, data):
+        for name, register in data.items():
+            address = "NULL"
+            length = "NULL"
+            title = ""
+            description = ""
+            if 'address' in register:
+                address = str(register['address'])
+
+            if 'length' in register:
+                length = str(register['length'])
+
+            if 'title' in register:
+                title = str(register['title'])
+
+            if 'description' in register:
+                description = str(register['description'])
+
+#self.RegisterTree.setHeaderLabels(["Name", "Address", "Length", "Title", "Description"])
+            root = QtWidgets.QTreeWidgetItem(self.RegisterTree,
+                 [name, address, length, title, description])
+
+
+            print(name, register)
+
 
     def safeSetField(self, address, value):
         if address in self.dataHandles:
@@ -162,11 +190,11 @@ class Window(QtWidgets.QMainWindow):
                 for name, fielddata in groupdata['properties'].items():
                     self.expandField(name, fielddata, self.SPI, "#/spi")
             elif group == "registers":
-                self.loadRegisters()
+                self.createRegistersUI()
             elif group == "fields":
-                self.loadFields()
+                self.createFieldsUI()
             elif group == "functions":
-                self.loadFunctions()
+                self.createFunctionsUI()
             elif group == "extensions":
                 pass
             elif group == "cyanobyte":
@@ -174,13 +202,15 @@ class Window(QtWidgets.QMainWindow):
             else:
                 print(group)
 
-    def loadRegisters(self):
+    def createRegistersUI(self):
+        self.RegisterTree = QtWidgets.QTreeWidget()
+        self.RegisterTree.setHeaderLabels(["Name", "Address", "Length", "Title", "Description"])
+        self.Registers.addWidget(self.RegisterTree)
+
+    def createFieldsUI(self):
         pass
 
-    def loadFields(self):
-        pass
-
-    def loadFunctions(self):
+    def createFunctionsUI(self):
         pass
 
     def createRadioField(self, name, description,  obj, parent, basename):
