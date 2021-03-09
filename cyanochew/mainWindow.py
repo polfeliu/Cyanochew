@@ -1,9 +1,14 @@
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
 from PyQt5.QtCore import Qt
+from PyQt5.Qt import QStandardItemModel, QStandardItem
+
 import json
 import sys
 
 from pprint import pprint
+
+# TODO Show data in Hex/Decimal/Binary
+
 
 class Window(QtWidgets.QMainWindow):
 
@@ -121,6 +126,7 @@ class Window(QtWidgets.QMainWindow):
             else:
                 self.addlog(f"Cannot Set field{address}")
 
+    RegisterTreeList = []
     def loadRegisters(self, data):
         for name, register in data.items():
             address = "NULL"
@@ -139,12 +145,45 @@ class Window(QtWidgets.QMainWindow):
             if 'description' in register:
                 description = str(register['description'])
 
-#self.RegisterTree.setHeaderLabels(["Name", "Address", "Length", "Title", "Description"])
-            root = QtWidgets.QTreeWidgetItem(self.RegisterTree,
-                 [name, address, length, title, description])
+            name = QStandardItem(name)
+            address = QStandardItem(address)
+            length = QStandardItem(length)
+            title = QStandardItem(title)
+            description = QStandardItem(description)
+
+            edit = QStandardItem()
+            self.RegisterTreeList.append(
+                name
+            )
+            self.RegisterTreeRoot.appendRow([name,edit,address,length,title,description]),
+
+            button = QtWidgets.QToolButton()
+            button.setText(f"Edit {name.text()}")
+            button.setMinimumHeight(23)
+            button.setMaximumSize(button.sizeHint())
+            self.RegisterTree.setIndexWidget(edit.index(), button)
+
+            register = 0 #Placeholder, TODO
+            # Add fields
+            self.addFieldToTree(name, register)
+
+    def addFieldToTree(self, parent, register):
+        fieldname = QStandardItem("Field Name")
+        fieldnull = QStandardItem("")
+        fieldnull.setEditable(False)
+        fieldlength = QStandardItem("6") #Length = bitEnd - bitStart
+        fieldtitle = QStandardItem("Title")
+        fielddescription = QStandardItem("Description")
+
+        parent.appendRow([
+            fieldname,
+            fieldnull,
+            fieldlength,
+            fieldtitle,
+            fielddescription
+        ])
 
 
-            print(name, register)
 
 
     def safeSetField(self, address, value):
@@ -203,9 +242,17 @@ class Window(QtWidgets.QMainWindow):
                 print(group)
 
     def createRegistersUI(self):
-        self.RegisterTree = QtWidgets.QTreeWidget()
-        self.RegisterTree.setHeaderLabels(["Name", "Address", "Length", "Title", "Description"])
+
+        self.RegisterTree = QtWidgets.QTreeView()
+        self.RegisterTree.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.RegisterTreeRoot = QStandardItemModel()
+        self.RegisterTreeRoot.setHorizontalHeaderLabels(["Name", "Editor", "Address", "Length", "Title", "Description"])
+        self.RegisterTree.setModel(self.RegisterTreeRoot)
+        self.RegisterTree.setUniformRowHeights(True)
+        self.RegisterTree.setColumnWidth(0,200)
+
         self.Registers.addWidget(self.RegisterTree)
+
 
     def createFieldsUI(self):
         pass
