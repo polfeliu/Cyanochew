@@ -40,16 +40,12 @@ class Window(QtWidgets.QMainWindow):
         SPI.setLayout(self.SPI)
 
         Registers = self.findChild(QtWidgets.QWidget, "Registers")
-        self.Registers = QtWidgets.QFormLayout()
+        self.Registers = QtWidgets.QVBoxLayout()
         Registers.setLayout(self.Registers)
 
         Fields = self.findChild(QtWidgets.QWidget, "Fields")
-        self.Fields = QtWidgets.QFormLayout()
+        self.Fields = QtWidgets.QVBoxLayout()
         Fields.setLayout(self.Fields)
-
-        Functions = self.findChild(QtWidgets.QWidget, "Functions")
-        self.Functions = QtWidgets.QFormLayout()
-        Functions.setLayout(self.Functions)
 
         Functions = self.findChild(QtWidgets.QWidget, "Functions")
         self.Functions = QtWidgets.QFormLayout()
@@ -58,6 +54,12 @@ class Window(QtWidgets.QMainWindow):
         Extensions = self.findChild(QtWidgets.QWidget, "Extensions")
         self.Extensions = QtWidgets.QFormLayout()
         Extensions.setLayout(self.Extensions)
+
+
+        Lifecycle = self.findChild(QtWidgets.QWidget, "Lifecycle")
+        self.Lifecycle = QtWidgets.QFormLayout()
+        Lifecycle.setLayout(self.Lifecycle)
+
 
         self.log = self.findChild(QtWidgets.QPlainTextEdit, "log")
 
@@ -151,21 +153,15 @@ class Window(QtWidgets.QMainWindow):
             title = QStandardItem(title)
             description = QStandardItem(description)
 
-            edit = QStandardItem()
             self.RegisterTreeList.append(
                 name
             )
-            self.RegisterTreeRoot.appendRow([name,edit,address,length,title,description]),
-
-            button = QtWidgets.QToolButton()
-            button.setText(f"Edit {name.text()}")
-            button.setMinimumHeight(23)
-            button.setMaximumSize(button.sizeHint())
-            self.RegisterTree.setIndexWidget(edit.index(), button)
+            self.RegisterTreeRoot.appendRow([name,address,length,title,description]),
 
             register = 0 #Placeholder, TODO
             # Add fields
             self.addFieldToTree(name, register)
+
 
     def addFieldToTree(self, parent, register):
         fieldname = QStandardItem("Field Name")
@@ -183,8 +179,17 @@ class Window(QtWidgets.QMainWindow):
             fielddescription
         ])
 
+    def newRegister(self):
+        pass
 
+    def editRegister(self):
+        pass
 
+    def deleteRegister(self):
+        index = self.RegisterTree.currentIndex()
+        asdf = index.parent()
+        self.RegisterTreeRoot.removeRow(index.row(),index.parent())
+        self.addlog("deleteeee")
 
     def safeSetField(self, address, value):
         if address in self.dataHandles:
@@ -242,11 +247,27 @@ class Window(QtWidgets.QMainWindow):
                 print(group)
 
     def createRegistersUI(self):
+        #Button
+        buttons = QtWidgets.QHBoxLayout()
+        new = QtWidgets.QPushButton("New")
+        new.setMaximumWidth(100)
+        new.clicked.connect(self.newRegister)
+        edit = QtWidgets.QPushButton("Edit")
+        edit.setMaximumWidth(100)
+        edit.clicked.connect(self.editRegister)
+        delete = QtWidgets.QPushButton("Delete")
+        delete.setMaximumWidth(100)
+        delete.clicked.connect(self.deleteRegister)
+        buttons.addWidget(new)
+        buttons.addWidget(edit)
+        buttons.addWidget(delete)
+        self.Registers.addLayout(buttons)
 
+        #TreeView
         self.RegisterTree = QtWidgets.QTreeView()
         self.RegisterTree.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.RegisterTreeRoot = QStandardItemModel()
-        self.RegisterTreeRoot.setHorizontalHeaderLabels(["Name", "Editor", "Address", "Length", "Title", "Description"])
+        self.RegisterTreeRoot.setHorizontalHeaderLabels(["Name", "Address", "Length", "Title", "Description"])
         self.RegisterTree.setModel(self.RegisterTreeRoot)
         self.RegisterTree.setUniformRowHeights(True)
         self.RegisterTree.setColumnWidth(0,200)
