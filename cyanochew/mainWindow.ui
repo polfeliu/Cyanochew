@@ -6,15 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1056</width>
-    <height>641</height>
+    <width>1069</width>
+    <height>884</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout_2">
+   <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1,0">
     <property name="spacing">
      <number>10</number>
     </property>
@@ -28,52 +28,83 @@
      <number>25</number>
     </property>
     <property name="bottomMargin">
-     <number>25</number>
+     <number>0</number>
     </property>
     <item>
-     <widget class="QTabWidget" name="tabWidget">
-      <property name="currentIndex">
-       <number>7</number>
+     <widget class="QSplitter" name="splitter">
+      <property name="frameShape">
+       <enum>QFrame::NoFrame</enum>
       </property>
-      <widget class="QWidget" name="Info">
-       <attribute name="title">
-        <string>Info</string>
-       </attribute>
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="opaqueResize">
+       <bool>true</bool>
+      </property>
+      <property name="childrenCollapsible">
+       <bool>false</bool>
+      </property>
+      <widget class="QTabWidget" name="tabWidget">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>200</height>
+        </size>
+       </property>
+       <property name="currentIndex">
+        <number>7</number>
+       </property>
+       <widget class="QWidget" name="Info">
+        <attribute name="title">
+         <string>Info</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="I2C">
+        <attribute name="title">
+         <string>I2C</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="SPI">
+        <attribute name="title">
+         <string>SPI</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="Registers">
+        <attribute name="title">
+         <string>Registers</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="Fields">
+        <attribute name="title">
+         <string>Fields</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="Functions">
+        <attribute name="title">
+         <string>Functions</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="Extensions">
+        <attribute name="title">
+         <string>Extensions</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="Lifecycle">
+        <attribute name="title">
+         <string>Lifecycle</string>
+        </attribute>
+       </widget>
       </widget>
-      <widget class="QWidget" name="I2C">
-       <attribute name="title">
-        <string>I2C</string>
-       </attribute>
-      </widget>
-      <widget class="QWidget" name="SPI">
-       <attribute name="title">
-        <string>SPI</string>
-       </attribute>
-      </widget>
-      <widget class="QWidget" name="Registers">
-       <attribute name="title">
-        <string>Registers</string>
-       </attribute>
-      </widget>
-      <widget class="QWidget" name="Fields">
-       <attribute name="title">
-        <string>Fields</string>
-       </attribute>
-      </widget>
-      <widget class="QWidget" name="Functions">
-       <attribute name="title">
-        <string>Functions</string>
-       </attribute>
-      </widget>
-      <widget class="QWidget" name="Extensions">
-       <attribute name="title">
-        <string>Extensions</string>
-       </attribute>
-      </widget>
-      <widget class="QWidget" name="Lifecycle">
-       <attribute name="title">
-        <string>Lifecycle</string>
-       </attribute>
+      <widget class="QPlainTextEdit" name="log">
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
       </widget>
      </widget>
     </item>
@@ -108,13 +139,6 @@
       </item>
      </layout>
     </item>
-    <item>
-     <widget class="QPlainTextEdit" name="log">
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -122,7 +146,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1056</width>
+     <width>1069</width>
      <height>21</height>
     </rect>
    </property>
