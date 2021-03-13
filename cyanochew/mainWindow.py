@@ -7,8 +7,12 @@ import sys
 
 from pprint import pprint
 
+from Models import RegisterItem, FieldItem
+
+
 # TODO Show data in Hex/Decimal/Binary
-from Models import RegistersModel
+# TODO Improve edit of lists (for example i2c addresses)
+
 
 class Window(QtWidgets.QMainWindow):
 
@@ -163,7 +167,7 @@ class Window(QtWidgets.QMainWindow):
         registername = field['register'].split("#/registers/")[1]
 
         self.FieldsTreeRoot.appendRow([
-            QStandardItem(name),
+            FieldItem(name),
             QStandardItem(field['readWrite']),
             QStandardItem(field['bitstart']),
             QStandardItem(field['bitend']),
@@ -202,7 +206,7 @@ class Window(QtWidgets.QMainWindow):
             register['readWrite'] = "ND"
 
         self.RegistersTreeRoot.appendRow([
-            QStandardItem(name),
+            RegisterItem(name),
             QStandardItem(str(register['address'])),
             QStandardItem(str(register['length'])),
             QStandardItem(register['signed']),
@@ -212,7 +216,7 @@ class Window(QtWidgets.QMainWindow):
         ])
 
         address = "#/registers/" + name
-        self.dataHandles[address]  = self.RegistersTreeRoot.child(self.RegistersModel.rowCount() - 1)
+        self.dataHandles[address] = self.RegistersTreeRoot.child(self.RegistersModel.rowCount() - 1)
 
 
     def addFieldToRegisterTree(self, registername, name, field):
@@ -234,17 +238,63 @@ class Window(QtWidgets.QMainWindow):
             QStandardItem(field['description'])
         ])
 
+
+    def getFieldsOfRegister(self, registername):
+        fields = []
+        for name, item in self.dataHandles.items():
+            if isinstance(item, FieldItem):
+                name = self.FieldsModel.item(item.index().row(), 7).text() # register name is the 7th column
+                if registername == name:
+                    fields.append(item)
+
+        return fields
+
+
     def newRegister(self):
-        pass
+        names = [name for name in self.dataHandles.keys() if name.startswith("#/registers/newRegister")]
+        if len(names):
+            num = 1
+            for name in names:
+                try:
+                    split = name.split("#/registers/newRegister")
+                    num = max(num, int(split[1]))
+                except:
+                    pass
+
+            name = "newRegister" + str(num + 1)
+        else:
+            name = "newRegister"
+
+        register = { #Required fields
+            'title': f"title of {name}",
+            'description': f"description of {name}",
+            'address': 0,
+            'length': 0
+        }
+        self.addRegister(name,register)
+
+        #TODO check if there are fields that are already pointing to this new register
+
 
     def editRegister(self):
-        pass
+        index = self.RegisterTree.currentIndex()
+        item = self.RegistersModel.item(index.row())
+
+        if isinstance(item, RegisterItem):
+            key = "#/registers/" + item.text()
+
+        #self.getFieldsOfRegister()
 
     def deleteRegister(self):
         index = self.RegisterTree.currentIndex()
-        asdf = index.parent()
-        self.RegistersModel.removeRow(index.row(), index.parent())
-        self.addlog("deleteeee")
+        item = self.RegistersModel.item(index.row())
+
+        if isinstance(item, RegisterItem):
+            key = "#/registers/" + item.text()
+            if key in self.dataHandles:
+                del self.dataHandles[key]
+            self.RegistersModel.removeRow(index.row(), index.parent())
+
 
     def newField(self):
         pass
@@ -353,14 +403,12 @@ class Window(QtWidgets.QMainWindow):
         new = QtWidgets.QPushButton("New")
         new.setMaximumWidth(100)
         new.clicked.connect(self.newField)
-        edit = QtWidgets.QPushButton("Edit")
-        edit.setMaximumWidth(100)
-        edit.clicked.connect(self.editField)
+
         delete = QtWidgets.QPushButton("Delete")
         delete.setMaximumWidth(100)
         delete.clicked.connect(self.deleteField)
         buttons.addWidget(new)
-        buttons.addWidget(edit)
+
         buttons.addWidget(delete)
         self.Fields.addLayout(buttons)
 
