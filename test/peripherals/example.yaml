@@ -100,7 +100,7 @@ fields:
   FieldD:
     title: This field should never appear
     description: A bit that is neither readable nor writeable
-    register: '#/registers/RegisterA'
+    register: '#/registers/RegisterC'
     readWrite: 'n'
     bitStart: 0
     bitEnd: 0
