@@ -9,6 +9,8 @@ from pprint import pprint
 
 from Models import RegisterItem, FieldItem
 
+from registerLayout import RegisterLayoutView
+
 
 # TODO Show data in Hex/Decimal/Binary
 # TODO Improve edit of lists (for example i2c addresses)
@@ -276,6 +278,17 @@ class Window(QtWidgets.QMainWindow):
         #TODO check if there are fields that are already pointing to this new register
 
 
+    registerLayoutView = None
+
+    def registerLayoutViewSave(self):
+
+        pass
+
+    def registerLayoutViewClose(self):
+        self.registerLayoutView.close()
+        self.registerLayoutView = None
+        pass
+
     def editRegister(self):
         index = self.RegisterTree.currentIndex()
         item = self.RegistersModel.item(index.row())
@@ -283,7 +296,19 @@ class Window(QtWidgets.QMainWindow):
         if isinstance(item, RegisterItem):
             key = "#/registers/" + item.text()
 
-        #self.getFieldsOfRegister()
+        #fields = self.getFieldsOfRegister(item.text())
+
+
+        if self.registerLayoutView is not None:
+            self.registerLayoutView.close()
+            self.registerLayoutView.deleteLater()
+            self.registerLayoutView = None
+
+        self.registerLayoutView = RegisterLayoutView()
+        self.registerLayoutView.show()
+
+        self.registerLayoutView.saveButton.clicked.connect(self.registerLayoutViewSave)
+        self.registerLayoutView.closeButton.clicked.connect(self.registerLayoutViewClose)
 
     def deleteRegister(self):
         index = self.RegisterTree.currentIndex()

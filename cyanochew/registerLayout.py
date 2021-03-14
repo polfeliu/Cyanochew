@@ -514,6 +514,12 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.fieldlistView.itemDoubleClicked.connect(self.focusName)
         self.sideBar.addWidget(self.fieldlistView)
 
+
+        self.closeButton = QtWidgets.QPushButton("Close")
+        self.saveButton = QtWidgets.QPushButton("Save")
+        self.sideBar.addWidget(self.closeButton)
+        self.sideBar.addWidget(self.saveButton)
+
         layout.addLayout(self.sideBar)
 
         self.setLayout(layout)
