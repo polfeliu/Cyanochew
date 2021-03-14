@@ -152,11 +152,11 @@ class Window(QtWidgets.QMainWindow):
             field['readWrite'] = "ND" #required
             #Must be R, R/W, W, n
 
-        if 'bitstart' not in field:
-            field['bitstart'] = 0;
+        if 'bitStart' not in field:
+            field['bitStart'] = 0;
 
-        if 'bitend' not in field:
-            field['bitend'] = 0
+        if 'bitEnd' not in field:
+            field['bitEnd'] = 0
 
         if 'type' not in field:
             field['type'] = 0
@@ -171,8 +171,8 @@ class Window(QtWidgets.QMainWindow):
         self.FieldsTreeRoot.appendRow([
             FieldItem(name),
             QStandardItem(field['readWrite']),
-            QStandardItem(field['bitstart']),
-            QStandardItem(field['bitend']),
+            QStandardItem(str(field['bitStart'])),
+            QStandardItem(str(field['bitEnd'])),
             QStandardItem(field['type']),
             QStandardItem(field['title']),
             QStandardItem(field['description']),
@@ -187,6 +187,26 @@ class Window(QtWidgets.QMainWindow):
             name,
             field
         )
+
+    def getField(self, fieldname):
+        field = {}
+        for name, item in self.dataHandles.items():
+            if name == fieldname and isinstance(item, FieldItem):
+                field['readWrite']  = self.FieldsModel.item(item.index().row(), 1).text()
+                field['bitStart']   = int(self.FieldsModel.item(item.index().row(), 2).text())
+                field['bitEnd']     = int(self.FieldsModel.item(item.index().row(), 3).text())
+                field['type']       = self.FieldsModel.item(item.index().row(), 4).text()
+                field['title']      = self.FieldsModel.item(item.index().row(), 5).text()
+                field['description']= self.FieldsModel.item(item.index().row(), 6).text()
+                field['register']   = self.FieldsModel.item(item.index().row(), 7).text()
+                field['register'] = "#/registers/" + field['register']
+                return field
+
+        return False
+
+
+    def setField(self, fieldname, field):
+        pass#TODO
 
     def addRegister(self, name, register):
         if 'title' not in register:
@@ -220,6 +240,11 @@ class Window(QtWidgets.QMainWindow):
         address = "#/registers/" + name
         self.dataHandles[address] = self.RegistersTreeRoot.child(self.RegistersModel.rowCount() - 1)
 
+    def getRegister(self, registername):
+        pass#TODO
+
+    def setRegister(self, registername, register):
+        pass#TODO
 
     def addFieldToRegisterTree(self, registername, name, field):
         if "#/registers/" + registername not in self.dataHandles:
@@ -233,7 +258,7 @@ class Window(QtWidgets.QMainWindow):
         register.appendRow([
             QStandardItem(name),
             null,
-            QStandardItem(str(field['bitend'] - field['bitstart'])),
+            QStandardItem(str(field['bitEnd'] - field['bitStart'])),
             null,
             null,
             QStandardItem(field['title']),
@@ -241,13 +266,13 @@ class Window(QtWidgets.QMainWindow):
         ])
 
 
+
     def getFieldsOfRegister(self, registername):
-        fields = []
+        fields = {}
         for name, item in self.dataHandles.items():
             if isinstance(item, FieldItem):
-                name = self.FieldsModel.item(item.index().row(), 7).text() # register name is the 7th column
-                if registername == name:
-                    fields.append(item)
+                if registername == self.FieldsModel.item(item.index().row(), 7).text(): # register name is the 7th column
+                    fields[name] = self.getField(name)
 
         return fields
 
@@ -281,34 +306,47 @@ class Window(QtWidgets.QMainWindow):
     registerLayoutView = None
 
     def registerLayoutViewSave(self):
+        self.registerLayoutView.registerLayout.fields
 
-        pass
+        self.editField()
+        pass#TODO
 
     def registerLayoutViewClose(self):
         self.registerLayoutView.close()
+        self.registerLayoutView.deleteLater()
         self.registerLayoutView = None
-        pass
+
+    editingRegister = None
 
     def editRegister(self):
         index = self.RegisterTree.currentIndex()
         item = self.RegistersModel.item(index.row())
 
-        if isinstance(item, RegisterItem):
-            key = "#/registers/" + item.text()
+        if not isinstance(item, RegisterItem):
+            return False
 
-        #fields = self.getFieldsOfRegister(item.text())
+        key = "#/registers/" + item.text()
+        fields = self.getFieldsOfRegister(item.text())
 
-
+        print(self.registerLayoutView)
         if self.registerLayoutView is not None:
-            self.registerLayoutView.close()
-            self.registerLayoutView.deleteLater()
-            self.registerLayoutView = None
+            self.registerLayoutViewClose()
 
         self.registerLayoutView = RegisterLayoutView()
-        self.registerLayoutView.show()
 
-        self.registerLayoutView.saveButton.clicked.connect(self.registerLayoutViewSave)
-        self.registerLayoutView.closeButton.clicked.connect(self.registerLayoutViewClose)
+        self.registerLayoutView.SaveRequest.connect(self.registerLayoutViewSave)
+        self.registerLayoutView.CloseRequest.connect(self.registerLayoutViewClose)
+        self.registerLayoutView.setWindowTitle(item.text())
+
+        #Load Data
+        for name, field in fields.items():
+            self.registerLayoutView.registerLayout.fields.append([
+                name,
+                field['bitEnd'],
+                field['bitStart']
+            ])
+
+        self.registerLayoutView.show()
 
     def deleteRegister(self):
         index = self.RegisterTree.currentIndex()
@@ -322,13 +360,13 @@ class Window(QtWidgets.QMainWindow):
 
 
     def newField(self):
-        pass
+        pass#TODO
 
     def editField(self):
-        pass
+        pass#TODO
 
     def deleteField(self):
-        pass
+        pass#TODO
 
     def safeSetField(self, address, value):
         if address in self.dataHandles:
@@ -440,7 +478,7 @@ class Window(QtWidgets.QMainWindow):
         # Model
         self.FieldsModel = QStandardItemModel()
         self.FieldsModel.setHorizontalHeaderLabels(
-            ["Name", "R/W", "bitstart", "bitend", "type", "Title", "Description", "Register"])
+            ["Name", "R/W", "bitStart", "bitEnd", "type", "Title", "Description", "Register"])
         # self.FieldModel.dataChanged.connect(...) TODO
         self.FieldsTreeRoot = self.FieldsModel.invisibleRootItem()
 
@@ -456,10 +494,8 @@ class Window(QtWidgets.QMainWindow):
 
         self.Fields.addWidget(self.FieldTree)
 
-
-
     def createFunctionsUI(self):
-        pass
+        pass#TODO
 
     def createRadioField(self, name, description,  obj, parent, basename):
         groupbox = QtWidgets.QGroupBox()

@@ -7,31 +7,36 @@ class _RegisterLayout(QtWidgets.QWidget):
     UpdatedData = QtCore.pyqtSignal()
     DoubleClickField = QtCore.pyqtSignal()
 
-    # List of fields. Name, bitStart, bitEnd
-    fields = []
-    '''fields =  [
-        ["Field1", 1,2],
-        ["Field2", 3,4],
-        ["Field3", 6,12],
-        ["Field4", 12, 50]
-    ]'''
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-    length = 8
+        self.setSizePolicy(
+            QtWidgets.QSizePolicy.MinimumExpanding,
+            QtWidgets.QSizePolicy.MinimumExpanding
+        )
 
-    overlapping = {}
-    selected = None
+        self._padding = 4  # n-pixel gap around edge.
 
-    # Key of fields with list of splitfields with a list of:
-    # #Row, #ColumnStart, #ColumnEnd, #BitStart # BitEnd #StartHandle, #EndHandle, Overlapping
-    splitFields = {}
+        # List of fields. Name, bitStart, bitEnd
+        self.fields = []
 
-    rectFields = {}
-    rectStartHandles = {}
-    rectEndHandles = {}
 
-    bitwidth = 8
+        self.length = 8
 
-    nrows = 0
+        self.overlapping = {}
+        self.selected = None
+
+        # Key of fields with list of splitfields with a list of:
+        # #Row, #ColumnStart, #ColumnEnd, #BitStart # BitEnd #StartHandle, #EndHandle, Overlapping
+        self.splitFields = {}
+
+        self.rectFields = {}
+        self.rectStartHandles = {}
+        self.rectEndHandles = {}
+
+        self.bitwidth = 8
+
+        self.nrows = 0
 
     def calculateOverlapping(self):
         self.overlapping = {}
@@ -121,16 +126,6 @@ class _RegisterLayout(QtWidgets.QWidget):
     def postoXY(self, pos):
         return pos%self.bitwidth,pos//self.bitwidth
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.setSizePolicy(
-            QtWidgets.QSizePolicy.MinimumExpanding,
-            QtWidgets.QSizePolicy.MinimumExpanding
-        )
-
-        self._padding = 4  # n-pixel gap around edge.
-
     def updateBitWidth(self, bitwidth):
         self.bitwidth = bitwidth
         self.nrows = max(
@@ -143,7 +138,7 @@ class _RegisterLayout(QtWidgets.QWidget):
     height_bitbox = 60
 
     def paintEvent(self, e):
-        #For now we will update the split fields every time
+        #For now we will update the split fields every time, this could be optimitzed
         self.updateSplitFields()
 
         painter = QtGui.QPainter(self)
@@ -271,7 +266,7 @@ class _RegisterLayout(QtWidgets.QWidget):
         #Numbers
         for pos in range(0,self.bitwidth*self.nrows):
 
-            if pos > self.length:
+            if pos >= self.length:
                 painter.setPen(Qt.red);
             else:
                 painter.setPen(Qt.black);
@@ -480,6 +475,9 @@ class RegisterLayoutView(QtWidgets.QWidget):
 
         self.sideBar = QtWidgets.QVBoxLayout()
 
+        self.saveButton = QtWidgets.QPushButton("Save")
+        self.sideBar.addWidget(self.saveButton)
+
         self.selectedName = QtWidgets.QLineEdit("")
         self.selectedName.setAlignment(QtCore.Qt.AlignCenter)
         font = QtGui.QFont()
@@ -532,16 +530,35 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.sideBar.addWidget(self.fieldlistView)
 
 
-        self.closeButton = QtWidgets.QPushButton("Close")
-        self.saveButton = QtWidgets.QPushButton("Save")
-        self.sideBar.addWidget(self.closeButton)
-        self.sideBar.addWidget(self.saveButton)
-
         layout.addLayout(self.sideBar)
 
         self.setLayout(layout)
 
         self.updateList()
+
+    SaveRequest = QtCore.pyqtSignal()
+    CloseRequest = QtCore.pyqtSignal()
+
+    def closeEvent(self, event):
+        msg = QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Information)
+
+        msg.setText("Do you want to save?")
+        msg.setWindowTitle("Save")
+        msg.setStandardButtons(QtWidgets.QMessageBox.Save | QtWidgets.QMessageBox.Cancel | QtWidgets.QMessageBox.Discard)
+
+        retval = msg.exec_()
+
+        if retval == QtWidgets.QMessageBox.Save:
+            self.SaveRequest.emit()
+            self.CloseRequest.emit()
+            event.accept()
+        elif retval == QtWidgets.QMessageBox.Discard:
+            self.CloseRequest.emit()
+            event.accept()
+        elif retval == QtWidgets.QMessageBox.Cancel:
+            event.ignore()
+
 
     def deleteSelectedField(self):
         self.registerLayout.fields.pop(
