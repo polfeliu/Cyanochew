@@ -8,12 +8,15 @@ class _RegisterLayout(QtWidgets.QWidget):
     DoubleClickField = QtCore.pyqtSignal()
 
     # List of fields. Name, bitStart, bitEnd
-    fields =  [
+    fields = []
+    '''fields =  [
         ["Field1", 1,2],
         ["Field2", 3,4],
         ["Field3", 6,12],
         ["Field4", 12, 50]
-    ]
+    ]'''
+
+    length = 8
 
     overlapping = {}
     selected = None
@@ -128,6 +131,14 @@ class _RegisterLayout(QtWidgets.QWidget):
 
         self._padding = 4  # n-pixel gap around edge.
 
+    def updateBitWidth(self, bitwidth):
+        self.bitwidth = bitwidth
+        self.nrows = max(
+            self.nrows,
+            ((self.length - 1) // self.bitwidth) + 1
+        )
+        self.update()
+
 
     height_bitbox = 60
 
@@ -156,10 +167,10 @@ class _RegisterLayout(QtWidgets.QWidget):
         #Vertical
         for i in range(0, self.bitwidth + 1):
             rect = QtCore.QRect(
-                self._padding + i * self.width_bitbox - 1,  # X
-                0,  # Y
-                2,  # W
-                d_height  # H
+                int(self._padding + i * self.width_bitbox - 1),  # X
+                int(0),  # Y
+                int(2),  # W
+                int(d_height)  # H
             )
             painter.fillRect(rect, brush)
 
@@ -190,10 +201,10 @@ class _RegisterLayout(QtWidgets.QWidget):
                     brush.setColor(QtGui.QColor(0xEF, 0x83, 0x54, 255))
 
                 rect = QtCore.QRect(
-                           self._padding + start * self.width_bitbox + 2, #X
-                           self._padding + row * self.height_bitbox +2,   #Y
-                           width*self.width_bitbox - 4,                   #W
-                           self.height_bitbox - 4                         #H
+                           int(self._padding + start * self.width_bitbox + 2), #X
+                           int(self._padding + row * self.height_bitbox +2),   #Y
+                           int(width*self.width_bitbox - 4),                   #W
+                           int(self.height_bitbox - 4)                         #H
                        )
 
                 self.rectFields[i].append(rect)
@@ -216,10 +227,10 @@ class _RegisterLayout(QtWidgets.QWidget):
                 if leftHandle:
                     #Draw Left Handle
                     handlerect = QtCore.QRect(
-                        self._padding + start*self.width_bitbox + 5,
-                        self._padding + row * self.height_bitbox + 17,
-                        7,
-                        self.height_bitbox - 22
+                        int(self._padding + start*self.width_bitbox + 5),
+                        int(self._padding + row * self.height_bitbox + 17),
+                        int(7),
+                        int(self.height_bitbox - 22)
                     )
                     painter.fillRect(handlerect, brush)
                     if not self.HorizontalMSB:
@@ -231,10 +242,10 @@ class _RegisterLayout(QtWidgets.QWidget):
 
                     #Draw Right Handle
                     handlerect = QtCore.QRect(
-                        self._padding + (start + width) * self.width_bitbox - 12,
-                        self._padding + row * self.height_bitbox + 17,
-                        7,
-                        self.height_bitbox - 22
+                        int(self._padding + (start + width) * self.width_bitbox - 12),
+                        int(self._padding + row * self.height_bitbox + 17),
+                        int(7),
+                        int(self.height_bitbox - 22)
                     )
                     painter.fillRect(handlerect, brush)
 
@@ -259,11 +270,17 @@ class _RegisterLayout(QtWidgets.QWidget):
 
         #Numbers
         for pos in range(0,self.bitwidth*self.nrows):
+
+            if pos > self.length:
+                painter.setPen(Qt.red);
+            else:
+                painter.setPen(Qt.black);
+
             column, row = self.postoXY(pos)
             row, column = self.translateField(row, column)
             painter.drawText(
-                column * self.width_bitbox+9,
-                row * self.height_bitbox + 17,
+                int(column * self.width_bitbox+9),
+                int(row * self.height_bitbox + 17),
                 str(pos)
             )
 
@@ -553,9 +570,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
             self.updateList()
 
     def updateBitWidth(self):
-        self.registerLayout.bitwidth = self.bitwidthSpin.value()
-        self.registerLayout.update()
-
+        self.registerLayout.updateBitWidth(self.bitwidthSpin.value())
 
     def updateByteOrder(self):
         if self.RadioVerticalMSB.isChecked():
@@ -641,3 +656,11 @@ class RegisterLayoutView(QtWidgets.QWidget):
             return self[name]
 
         return getattr(self._dial, name)
+
+if __name__ == "__main__":
+    from PyQt5 import QtWidgets
+
+    app = QtWidgets.QApplication([])
+    volume = RegisterLayoutView()
+    volume.show()
+    app.exec_()
