@@ -104,7 +104,7 @@ class Window(QtWidgets.QMainWindow):
         self.enableI2C('i2c' in data)
         self.enableSPI('spi' in data)
 
-        self.dataToFields(data)
+        self.dataToObjects(data)
 
     def enableI2C(self, set):
         self.I2CEnable.setChecked(set)
@@ -118,7 +118,7 @@ class Window(QtWidgets.QMainWindow):
             if name.startswith("#/spi/"):
                 handle.setEnabled(set)
 
-    def dataToFields(self, data, baseaddress="#"):
+    def dataToObjects(self, data, baseaddress="#"):
         for key, item in data.items():
             address= f'{baseaddress}/{key}'
             if address == "#/registers":
@@ -128,15 +128,15 @@ class Window(QtWidgets.QMainWindow):
                 for name, field in item.items():
                     self.addField(name, field)
             elif isinstance(item, str):
-                self.safeSetField(address, item)
+                self.setObject(address, item)
             elif isinstance(item, int):
-                self.safeSetField(address, item)
+                self.setObject(address, item)
             elif isinstance(item, dict):
-                self.dataToFields(item, address)
+                self.dataToObjects(item, address)
             elif isinstance(item, list):
-                self.safeSetField(address, str(item).strip('[]'))
+                self.setObject(address, str(item).strip('[]'))
             else:
-                self.addlog(f"Cannot Set field{address}")
+                self.addlog(f"Cannot Set object {address}")
 
     def addField(self, name, field):
         if 'title' not in field:
@@ -368,7 +368,7 @@ class Window(QtWidgets.QMainWindow):
     def deleteField(self):
         pass#TODO
 
-    def safeSetField(self, address, value):
+    def setObject(self, address, value):
         if address in self.dataHandles:
             if isinstance(self.dataHandles[address], QtWidgets.QLabel):
                 self.dataHandles[address].setText(value)
@@ -380,7 +380,7 @@ class Window(QtWidgets.QMainWindow):
             elif isinstance(self.dataHandles[address], QtWidgets.QSpinBox):
                 self.dataHandles[address].setValue(value)
             else:
-                self.addlog(f"cannot set field {address} of type type {self.dataHandles[address]}")
+                self.addlog(f"cannot set object {address} of type {type(self.dataHandles[address])}")
         else:
             self.addlog(f"{address} doesn't exist in the UI")
 
@@ -402,14 +402,14 @@ class Window(QtWidgets.QMainWindow):
 
         for group,groupdata in data['properties'].items():
             if group == "info":
-                for name, fielddata in groupdata['properties'].items():
-                    self.expandField(name, fielddata, self.info, "#/info")
+                for name, object in groupdata['properties'].items():
+                    self.expandObject(name, object, self.info, "#/info")
             elif group == "i2c":
-                for name, fielddata in groupdata['properties'].items():
-                    self.expandField(name, fielddata, self.I2C, "#/i2c")
+                for name, object in groupdata['properties'].items():
+                    self.expandObject(name, object, self.I2C, "#/i2c")
             elif group == "spi":
-                for name, fielddata in groupdata['properties'].items():
-                    self.expandField(name, fielddata, self.SPI, "#/spi")
+                for name, object in groupdata['properties'].items():
+                    self.expandObject(name, object, self.SPI, "#/spi")
             elif group == "registers":
                 self.createRegistersUI()
             elif group == "fields":
@@ -497,7 +497,7 @@ class Window(QtWidgets.QMainWindow):
     def createFunctionsUI(self):
         pass#TODO
 
-    def createRadioField(self, name, description,  obj, parent, basename):
+    def createRadioObject(self, name, description, obj, parent, basename):
         groupbox = QtWidgets.QGroupBox()
         self.dataHandles[basename] = groupbox
         groupboxlayout = QtWidgets.QVBoxLayout()
@@ -512,7 +512,7 @@ class Window(QtWidgets.QMainWindow):
 
         parent.addRow(name, groupbox)
 
-    def createCheckBoxField(self, name, description,  obj, parent, basename):
+    def createCheckBoxObject(self, name, description, obj, parent, basename):
         groupbox = QtWidgets.QGroupBox()
         self.dataHandles[basename] = groupbox
         groupboxlayout = QtWidgets.QVBoxLayout()
@@ -527,13 +527,13 @@ class Window(QtWidgets.QMainWindow):
 
         parent.addRow(name, groupbox)
 
-    def createLineField(self, name, description,  obj, parent, basename):
+    def createLineObject(self, name, description, obj, parent, basename):
         lineedit = QtWidgets.QLineEdit()
         lineedit.setToolTip(description)
         self.dataHandles[basename] = lineedit
         parent.addRow(name, lineedit)
 
-    def createSpinBoxField(self, name, description, obj, parent, basename, type='double'):
+    def createSpinBoxObject(self, name, description, obj, parent, basename, type='double'):
         if type == 'double':
             spinbox = QtWidgets.QDoubleSpinBox()
         elif type == 'integer':
@@ -543,7 +543,7 @@ class Window(QtWidgets.QMainWindow):
         self.dataHandles[basename] = spinbox
         parent.addRow(name, spinbox)
 
-    def expandField(self, name, obj, parent, basename):
+    def expandObject(self, name, obj, parent, basename):
         handlename = f'{basename}/{name}'
 
         if 'description' in obj:
@@ -553,7 +553,7 @@ class Window(QtWidgets.QMainWindow):
 
         if 'enum' in obj:
 
-            self.createRadioField(
+            self.createRadioObject(
                 name,
                 description,
                 obj,
@@ -563,7 +563,7 @@ class Window(QtWidgets.QMainWindow):
         elif 'anyOf' in obj:
             for data in obj['anyOf']:
                 if 'enum' in data:
-                    self.createCheckBoxField(
+                    self.createCheckBoxObject(
                         name,
                         description,
                         data,
@@ -571,14 +571,14 @@ class Window(QtWidgets.QMainWindow):
                         handlename
                     )
         elif 'type' not in obj or obj['type'] == 'string':
-            self.createLineField(
+            self.createLineObject(
                 name,
                 description,
                 obj,
                 parent,
                 handlename)
         elif obj['type'] == 'number':
-            self.createSpinBoxField(
+            self.createSpinBoxObject(
                 name,
                 description,
                 obj,
@@ -586,7 +586,7 @@ class Window(QtWidgets.QMainWindow):
                 handlename,
             )
         elif obj['type'] == 'integer':
-            self.createSpinBoxField(
+            self.createSpinBoxObject(
                 name,
                 description,
                 obj,
@@ -597,10 +597,10 @@ class Window(QtWidgets.QMainWindow):
         elif obj['type'] == 'object':
             form = QtWidgets.QFormLayout()
             parent.addRow(name,form)
-            for childname, childfielddata in obj['properties'].items():
-                self.expandField(childname, childfielddata, form, handlename)
+            for childname, childobject in obj['properties'].items():
+                self.expandObject(childname, childobject, form, handlename)
         else:
-            self.addlog(f"Cannot expand field {handlename} when loading the spec")
+            self.addlog(f"Cannot expand object {handlename} when loading the spec")
 
 
 app = QtWidgets.QApplication([])
