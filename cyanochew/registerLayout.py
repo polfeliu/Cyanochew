@@ -1,6 +1,8 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
+#TODO When changing name, it should validate that it doesn't already exist
+
 class _RegisterLayout(QtWidgets.QWidget):
 
     SelectedSignal = QtCore.pyqtSignal(object)
@@ -17,9 +19,15 @@ class _RegisterLayout(QtWidgets.QWidget):
 
         self._padding = 4  # n-pixel gap around edge.
 
-        # List of fields. Name, bitStart, bitEnd
+        # List of fields.
+        # 0: Name
+        # 1: bitStart
+        # 2: bitEnd
+        # 3: ReadWrite
+        # 4: Type
+        # 5: Title
+        # 6: Description
         self.fields = []
-
 
         self.length = 8
 
@@ -37,6 +45,17 @@ class _RegisterLayout(QtWidgets.QWidget):
         self.bitwidth = 8
 
         self.nrows = 0
+
+    def newField(self, bitStart, bitEnd, ReadWrite='R', type='number', title="", description=""):
+        self.fields.append([
+            "New Field",    #Name
+            bitStart,       #bitStart
+            bitEnd,         #bitEnd
+            ReadWrite,      #ReadWrite
+            type,           #type
+            title,          #title
+            description     #description
+        ])
 
     def calculateOverlapping(self):
         self.overlapping = {}
@@ -395,12 +414,10 @@ class _RegisterLayout(QtWidgets.QWidget):
         else:
             row, column = self.PosToField(e.x(), e.y())
             pos = int(column + row * self.bitwidth)
-            self.fields.append(["New Field", pos,pos])
+            self.newField(pos, pos)
             self.selected = len(self.fields) - 1
             self.SelectedSignal.emit(self.selected)
             self.update()
-
-
 
     def setSelected(self, index):
         self.selected = index
@@ -476,6 +493,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.sideBar = QtWidgets.QVBoxLayout()
 
         self.saveButton = QtWidgets.QPushButton("Save")
+        self.saveButton.clicked.connect(self.SaveRequest.emit)
         self.sideBar.addWidget(self.saveButton)
 
         self.selectedName = QtWidgets.QLineEdit("")

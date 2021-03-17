@@ -124,7 +124,7 @@ class Window(QtWidgets.QMainWindow):
             if address == "#/registers":
                 for name, register in item.items():
                     self.addRegister(name,register)
-            if address == "#/fields":
+            elif address == "#/fields":
                 for name, field in item.items():
                     self.addField(name, field)
             elif isinstance(item, str):
@@ -189,9 +189,10 @@ class Window(QtWidgets.QMainWindow):
         )
 
     def getField(self, fieldname):
+        address = "#/fields/" + fieldname
         field = {}
         for name, item in self.dataHandles.items():
-            if name == fieldname and isinstance(item, FieldItem):
+            if name == address and isinstance(item, FieldItem):
                 field['readWrite']  = self.FieldsModel.item(item.index().row(), 1).text()
                 field['bitStart']   = int(self.FieldsModel.item(item.index().row(), 2).text())
                 field['bitEnd']     = int(self.FieldsModel.item(item.index().row(), 3).text())
@@ -255,16 +256,18 @@ class Window(QtWidgets.QMainWindow):
         null = QStandardItem("")
         null.setEditable(False)
 
+        handle = QStandardItem(name)
         register.appendRow([
-            QStandardItem(name),
+            handle,
             null,
-            QStandardItem(str(field['bitEnd'] - field['bitStart'])),
+            QStandardItem(str(abs(field['bitEnd'] - field['bitStart'] + 1))),
             null,
             null,
             QStandardItem(field['title']),
             QStandardItem(field['description'])
         ])
 
+        self.dataHandles[f'#/registers/{registername}.FIELD{name}'] = handle
 
 
     def getFieldsOfRegister(self, registername):
@@ -272,7 +275,8 @@ class Window(QtWidgets.QMainWindow):
         for name, item in self.dataHandles.items():
             if isinstance(item, FieldItem):
                 if registername == self.FieldsModel.item(item.index().row(), 7).text(): # register name is the 7th column
-                    fields[name] = self.getField(name)
+                    name = name.split("#/fields/")[1]
+                    fields[name] = self.getField(name) #TODO This method also searches though the dataHandles, could be optimitzed
 
         return fields
 
@@ -306,29 +310,62 @@ class Window(QtWidgets.QMainWindow):
     registerLayoutView = None
 
     def registerLayoutViewSave(self):
-        self.registerLayoutView.registerLayout.fields
+        #delete fields of register
+        for name, field in self.getFieldsOfRegister(self.editingRegister).items():
+            self.deleteField(name)
 
-        self.editField()
-        pass#TODO
+
+        #create updated fields
+        for fieldarray in self.registerLayoutView.registerLayout.fields:
+            field = {
+                'readWrite': fieldarray[3],
+                'bitStart': fieldarray[1],
+                'bitEnd': fieldarray[2],
+                'type': fieldarray[4],
+                'title': fieldarray[5],
+                'description': fieldarray[6],
+                'register': "#/registers/" + self.editingRegister
+            }
+
+            self.addField(fieldarray[0], field)
+
+        # List of fields.
+        # 0: Name
+        # 1: bitStart
+        # 2: bitEnd
+        # 3: ReadWrite
+        # 4: Type
+        # 5: Title
+        # 6: Description
+
+
 
     def registerLayoutViewClose(self):
         self.registerLayoutView.close()
         self.registerLayoutView.deleteLater()
         self.registerLayoutView = None
+        self.editingRegister = False
 
     editingRegister = None
 
     def editRegister(self):
         index = self.RegisterTree.currentIndex()
+
+        if index.parent().isValid(): #if it has parent it is a field, not a register
+            #Open Parent of the selected field
+            index = index.parent()
+
         item = self.RegistersModel.item(index.row())
 
         if not isinstance(item, RegisterItem):
             return False
 
+
+        self.editingRegister = item.text()
+
         key = "#/registers/" + item.text()
         fields = self.getFieldsOfRegister(item.text())
 
-        print(self.registerLayoutView)
         if self.registerLayoutView is not None:
             self.registerLayoutViewClose()
 
@@ -341,21 +378,38 @@ class Window(QtWidgets.QMainWindow):
         #Load Data
         for name, field in fields.items():
             self.registerLayoutView.registerLayout.fields.append([
-                name,
-                field['bitEnd'],
-                field['bitStart']
+                name,                       # 0
+                field['bitEnd'],            # 1
+                field['bitStart'],          # 2
+                field['readWrite'],         # 3
+                field['type'],              # 4
+                field['title'],             # 5
+                field['description'],       # 6
             ])
 
         self.registerLayoutView.show()
 
-    def deleteRegister(self):
+    def deleteRegisterSelected(self):
         index = self.RegisterTree.currentIndex()
+
+        if index.parent().isValid(): #If it has parent it is a field
+            return False
+
         item = self.RegistersModel.item(index.row())
 
         if isinstance(item, RegisterItem):
-            key = "#/registers/" + item.text()
-            if key in self.dataHandles:
-                del self.dataHandles[key]
+            pass
+            self.deleteRegister(item.text())
+
+    def deleteRegister(self, name):
+        key = "#/registers/" + name
+        if key not in self.dataHandles:
+            return False
+
+        item = self.dataHandles[key]
+        if isinstance(item, RegisterItem):
+            del self.dataHandles[key]
+            index = item.index()
             self.RegistersModel.removeRow(index.row(), index.parent())
 
 
@@ -365,8 +419,43 @@ class Window(QtWidgets.QMainWindow):
     def editField(self):
         pass#TODO
 
-    def deleteField(self):
-        pass#TODO
+    def deleteFieldSelected(self):
+        index = self.FieldTree.currentIndex()
+        item = self.FieldsModel.item(index.row())
+        self.deleteField(item.text())
+
+
+    def deleteField(self, name):
+        key = "#/fields/" + name
+        if key not in self.dataHandles:
+            return False
+
+        item = self.dataHandles[key]
+        if isinstance(item, FieldItem) and key in self.dataHandles:
+            register = self.getField(name)['register'].split("#/registers/")[1]
+            self.removeFieldOfRegisterTree(register, name)
+
+            del self.dataHandles[key]
+            index = item.index()
+            self.FieldsModel.removeRow(index.row(), index.parent())
+
+    def removeFieldOfRegisterTree(self, registername, fieldname):
+
+        registerkey = f'#/registers/{registername}'
+        if registerkey not in self.dataHandles:
+            return False
+
+        registerHandle = self.dataHandles[registerkey]
+
+        registerfieldkey = f'#/registers/{registername}.FIELD{fieldname}'
+        if registerfieldkey not in self.dataHandles:
+            return False
+
+        registerfieldHandle = self.dataHandles[registerfieldkey]
+        self.RegistersModel.item(registerHandle.index().row()).removeRow(registerfieldHandle.index().row())
+
+        del self.dataHandles[registerfieldkey]
+
 
     def setObject(self, address, value):
         if address in self.dataHandles:
@@ -434,7 +523,7 @@ class Window(QtWidgets.QMainWindow):
         edit.clicked.connect(self.editRegister)
         delete = QtWidgets.QPushButton("Delete")
         delete.setMaximumWidth(100)
-        delete.clicked.connect(self.deleteRegister)
+        delete.clicked.connect(self.deleteRegisterSelected)
         buttons.addWidget(new)
         buttons.addWidget(edit)
         buttons.addWidget(delete)
@@ -469,7 +558,7 @@ class Window(QtWidgets.QMainWindow):
 
         delete = QtWidgets.QPushButton("Delete")
         delete.setMaximumWidth(100)
-        delete.clicked.connect(self.deleteField)
+        delete.clicked.connect(self.deleteFieldSelected)
         buttons.addWidget(new)
 
         buttons.addWidget(delete)
