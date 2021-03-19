@@ -3,6 +3,11 @@ from PyQt5.QtCore import Qt
 
 #TODO When changing name, it should validate that it doesn't already exist
 
+# This view handles Start and End the other way around respect to cyanobyte and the main window as this was created prior to the main window.
+# Cyanobyte: bitStart: 7, bitEnd: 3
+# RegisterLayout: Start: 3, End: 7
+# When loading and saving they are reversed. This should be changed some day or refactor start and end to other names.
+
 class _RegisterLayout(QtWidgets.QWidget):
 
     SelectedSignal = QtCore.pyqtSignal(object)
@@ -21,8 +26,8 @@ class _RegisterLayout(QtWidgets.QWidget):
 
         # List of fields.
         # 0: Name
-        # 1: bitStart
-        # 2: bitEnd
+        # 1: start #Start is the minimum
+        # 2: end   #End is the maximum
         # 3: ReadWrite
         # 4: Type
         # 5: Title
@@ -46,11 +51,13 @@ class _RegisterLayout(QtWidgets.QWidget):
 
         self.nrows = 0
 
-    def newField(self, bitStart, bitEnd, ReadWrite='R', type='number', title="", description=""):
+    def newField(self, bitStart, bitEnd, ReadWrite='R', type='number', title="", description="", name="New Field"):
+        start = min(bitStart, bitEnd)
+        end = max(bitStart, bitEnd)
         self.fields.append([
-            "New Field",    #Name
-            bitStart,       #bitStart
-            bitEnd,         #bitEnd
+            name,           #Name
+            start,          #bitStart
+            end,            #bitEnd
             ReadWrite,      #ReadWrite
             type,           #type
             title,          #title

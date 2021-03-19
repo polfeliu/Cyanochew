@@ -260,7 +260,7 @@ class Window(QtWidgets.QMainWindow):
         register.appendRow([
             handle,
             null,
-            QStandardItem(str(abs(field['bitEnd'] - field['bitStart'] + 1))),
+            QStandardItem(str(abs(field['bitStart'] - field['bitEnd'] + 1))),
             null,
             null,
             QStandardItem(field['title']),
@@ -319,8 +319,8 @@ class Window(QtWidgets.QMainWindow):
         for fieldarray in self.registerLayoutView.registerLayout.fields:
             field = {
                 'readWrite': fieldarray[3],
-                'bitStart': fieldarray[1],
-                'bitEnd': fieldarray[2],
+                'bitStart': max(fieldarray[1],fieldarray[2]),
+                'bitEnd': min(fieldarray[1],fieldarray[2]),
                 'type': fieldarray[4],
                 'title': fieldarray[5],
                 'description': fieldarray[6],
@@ -328,17 +328,6 @@ class Window(QtWidgets.QMainWindow):
             }
 
             self.addField(fieldarray[0], field)
-
-        # List of fields.
-        # 0: Name
-        # 1: bitStart
-        # 2: bitEnd
-        # 3: ReadWrite
-        # 4: Type
-        # 5: Title
-        # 6: Description
-
-
 
     def registerLayoutViewClose(self):
         self.registerLayoutView.close()
@@ -348,7 +337,7 @@ class Window(QtWidgets.QMainWindow):
 
     editingRegister = None
 
-    def editRegister(self):
+    def editRegisterSelected(self):
         index = self.RegisterTree.currentIndex()
 
         if index.parent().isValid(): #if it has parent it is a field, not a register
@@ -377,15 +366,15 @@ class Window(QtWidgets.QMainWindow):
 
         #Load Data
         for name, field in fields.items():
-            self.registerLayoutView.registerLayout.fields.append([
-                name,                       # 0
-                field['bitEnd'],            # 1
-                field['bitStart'],          # 2
-                field['readWrite'],         # 3
-                field['type'],              # 4
-                field['title'],             # 5
-                field['description'],       # 6
-            ])
+            self.registerLayoutView.registerLayout.newField(
+                bitStart=field['bitStart'],
+                bitEnd=field['bitEnd'],
+                ReadWrite=field['readWrite'],
+                type=field['type'],
+                title=field['title'],
+                description=field['description'],
+                name=name
+            )
 
         self.registerLayoutView.show()
 
@@ -414,9 +403,6 @@ class Window(QtWidgets.QMainWindow):
 
 
     def newField(self):
-        pass#TODO
-
-    def editField(self):
         pass#TODO
 
     def deleteFieldSelected(self):
@@ -473,7 +459,7 @@ class Window(QtWidgets.QMainWindow):
         else:
             self.addlog(f"{address} doesn't exist in the UI")
 
-    def readData(self, address):
+    def readObject(self, address):
         for key in address.split('/'):
             if key == "#":
                 unpack = self.data
@@ -520,7 +506,7 @@ class Window(QtWidgets.QMainWindow):
         new.clicked.connect(self.newRegister)
         edit = QtWidgets.QPushButton("Edit")
         edit.setMaximumWidth(100)
-        edit.clicked.connect(self.editRegister)
+        edit.clicked.connect(self.editRegisterSelected)
         delete = QtWidgets.QPushButton("Delete")
         delete.setMaximumWidth(100)
         delete.clicked.connect(self.deleteRegisterSelected)
