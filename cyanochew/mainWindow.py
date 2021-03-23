@@ -4,6 +4,7 @@ from PyQt5.Qt import QStandardItemModel, QStandardItem
 
 import json
 import sys
+import yaml
 
 from pprint import pprint
 
@@ -18,14 +19,14 @@ from registerLayout import RegisterLayoutView
 
 class Window(QtWidgets.QMainWindow):
 
-    dataHandles = {}
+    objectHandles = {}
 
     def __init__(self):
         super(Window, self).__init__()
         uic.loadUi("mainWindow.ui", self)
 
         self.cyanobyteVersion = self.findChild(QtWidgets.QLabel, "cyanobyteVersion")
-        self.dataHandles["#/cyanobyte"] = self.cyanobyteVersion
+        self.objectHandles["#/cyanobyte"] = self.cyanobyteVersion
 
         info = self.findChild(QtWidgets.QWidget, "Info")
         self.info = QtWidgets.QFormLayout()
@@ -70,9 +71,34 @@ class Window(QtWidgets.QMainWindow):
         self.log = self.findChild(QtWidgets.QPlainTextEdit, "log")
 
         self.loadPropertiesFromSchema()
+
+        self.actionOpen = self.findChild(QtWidgets.QAction, "actionOpen")
+        self.actionOpen.triggered.connect(self.openFile)
+        self.actionSave = self.findChild(QtWidgets.QAction, "actionSave")
+        self.actionSave.triggered.connect(
+            lambda: self.saveFile(
+                self.openedFile
+            )
+        )
+        self.actionSaveAs = self.findChild(QtWidgets.QAction, "actionSaveAs")
+        self.actionSaveAs.triggered.connect(
+            lambda: self.saveFile(
+                QtWidgets.QFileDialog.getSaveFileName(self, 'Save File')[0]
+            )
+        )
+
+        self.actionSaveCopy = self.findChild(QtWidgets.QAction, "actionSaveCopy")
+        self.actionSaveCopy.triggered.connect(
+            lambda: self.saveFile(
+                QtWidgets.QFileDialog.getSaveFileName(self, 'Save File')[0],
+                copy=True
+            )
+        )
+
         self.show()
 
-        self.loadYamlFile()#Temporary, normally will be made from open command
+        self.openFile('../test/peripherals/example.yaml')#Temporary, normally will be made from open command
+        self.saveFile('../test/peripherals/exampleSaveAs.yaml', copy=True)#Temporary
         #self.reset()
 
     data = None
@@ -81,7 +107,7 @@ class Window(QtWidgets.QMainWindow):
         self.log.appendPlainText(msg)
 
     def reset(self):
-        for name, handle in self.dataHandles.items():
+        for name, handle in self.objectHandles.items():
             if isinstance(handle, QtWidgets.QGroupBox):
                 pass
             elif isinstance(handle, QtWidgets.QCheckBox):
@@ -95,26 +121,84 @@ class Window(QtWidgets.QMainWindow):
 
         self.enableSPI(False)
         self.enableI2C(False)
+        self.openedFile = None
 
-    def loadYamlFile(self):
-        import yaml
-        with open('../test/peripherals/example.yaml') as f:
+    def openFile(self, path):
+        with open(path) as f:
             data = yaml.load(f, Loader=yaml.FullLoader)
 
-        self.enableI2C('i2c' in data)
-        self.enableSPI('spi' in data)
+            self.enableI2C('i2c' in data)
+            self.enableSPI('spi' in data)
 
-        self.dataToObjects(data)
+            self.dataToObjects(data)
+            self.originalData = data
+            self.openedFile = path
+
+            self.actionSave.setEnabled(True)
+            self.actionSaveAs.setEnabled(True)
+            self.actionSaveCopy.setEnabled(True)
+
+
+    originalData = None
+    openedFile = None
+
+    def saveFile(self, path, copy=False):
+        data = self.objectsToData()
+        with open(path, 'w') as f:
+            yaml.dump(data, f)
+
+        if not copy:
+            self.openedFile = path
+            self.originalData = data
+
+
+    def objectsToData(self):
+        data = {}
+
+        def addData(address, d):
+            keys = address.split("/")
+            keys.pop(0) #Remove '#'
+            loc = data
+            for i, key in enumerate(keys):
+                if key not in loc:  # Key doesn't exist
+                    loc[key] = {}  # Create empty dict
+                elif not isinstance(loc[key], dict):  # Key exist but its not a dict and cannot further be expanded.
+                    del loc[key]  # Delete
+                    loc[key] = {}  # and place empty dict
+
+                if i < len(keys) - 1:
+                    loc = loc[key]
+
+            loc[key] = d
+
+        for key, object in self.objectHandles.items():
+            if key.startswith('#/i2c') and not self.I2CEnable.isChecked():
+                continue
+            elif key.startswith('#/spi') and not self.SPIEnable.isChecked():
+                continue
+            obj = self.getObject(key)
+
+            if obj is not None:
+                addData(key, obj)
+
+        #Conserve Original Functions and Extensions for now (TODO)
+        if 'functions' in self.originalData:
+            data['functions'] = self.originalData['functions']
+
+        if 'extensions' in self.originalData:
+            data['extensions'] = self.originalData['extensions']
+
+        return data
 
     def enableI2C(self, set):
         self.I2CEnable.setChecked(set)
-        for name, handle in self.dataHandles.items():
+        for name, handle in self.objectHandles.items():
             if name.startswith("#/i2c/"):
                 handle.setEnabled(set)
 
     def enableSPI(self, set):
         self.SPIEnable.setChecked(set)
-        for name, handle in self.dataHandles.items():
+        for name, handle in self.objectHandles.items():
             if name.startswith("#/spi/"):
                 handle.setEnabled(set)
 
@@ -180,7 +264,7 @@ class Window(QtWidgets.QMainWindow):
         ])
 
         address = "#/fields/" + name
-        self.dataHandles[address] = self.FieldsTreeRoot.child(self.FieldsModel.rowCount() - 1)
+        self.objectHandles[address] = self.FieldsTreeRoot.child(self.FieldsModel.rowCount() - 1)
 
         self.addFieldToRegisterTree(
             registername,
@@ -191,7 +275,7 @@ class Window(QtWidgets.QMainWindow):
     def getField(self, fieldname):
         address = "#/fields/" + fieldname
         field = {}
-        for name, item in self.dataHandles.items():
+        for name, item in self.objectHandles.items(): #TODO Why did I use a loop to search this KEY? It should be access directly...
             if name == address and isinstance(item, FieldItem):
                 field['readWrite']  = self.FieldsModel.item(item.index().row(), 1).text()
                 field['bitStart']   = int(self.FieldsModel.item(item.index().row(), 2).text())
@@ -204,6 +288,7 @@ class Window(QtWidgets.QMainWindow):
                 return field
 
         return False
+        #TODO Support Enums
 
 
     def setField(self, fieldname, field):
@@ -239,19 +324,47 @@ class Window(QtWidgets.QMainWindow):
         ])
 
         address = "#/registers/" + name
-        self.dataHandles[address] = self.RegistersTreeRoot.child(self.RegistersModel.rowCount() - 1)
+        self.objectHandles[address] = self.RegistersTreeRoot.child(self.RegistersModel.rowCount() - 1)
+
+        #Check if fields point to this register
+        for fieldname, field in self.getFieldsOfRegister(name).items():
+            self.addFieldToRegisterTree(
+                name,
+                fieldname,
+                field
+            )
 
     def getRegister(self, registername):
-        pass#TODO
+        address = "#/registers/" + registername
+        if address not in self.objectHandles:
+            return False
+
+        register = {}
+        han = self.objectHandles[address]
+        register['address']     = int(self.RegistersModel.item(han.index().row(), 1).text())#required
+        register['length']      = int(self.RegistersModel.item(han.index().row(), 2).text())#required
+        register['signed']      = self.RegistersModel.item(han.index().row(), 3).text()
+        register['readWrite']   = self.RegistersModel.item(han.index().row(), 4).text()
+        register['title']       = self.RegistersModel.item(han.index().row(), 5).text()#required
+        register['description'] = self.RegistersModel.item(han.index().row(), 6).text()#required
+
+        if register['signed'] == "ND":
+            del register['signed']
+
+        if register['readWrite'] == "ND":
+            del register['readWrite']
+
+        return register
 
     def setRegister(self, registername, register):
         pass#TODO
 
     def addFieldToRegisterTree(self, registername, name, field):
-        if "#/registers/" + registername not in self.dataHandles:
+
+        if "#/registers/" + registername not in self.objectHandles:
             return False
 
-        register = self.dataHandles["#/registers/" + registername]
+        register = self.objectHandles["#/registers/" + registername]
 
         null = QStandardItem("")
         null.setEditable(False)
@@ -267,22 +380,19 @@ class Window(QtWidgets.QMainWindow):
             QStandardItem(field['description'])
         ])
 
-        self.dataHandles[f'#/registers/{registername}.FIELD{name}'] = handle
-
-
     def getFieldsOfRegister(self, registername):
         fields = {}
-        for name, item in self.dataHandles.items():
+        for name, item in self.objectHandles.items():
             if isinstance(item, FieldItem):
                 if registername == self.FieldsModel.item(item.index().row(), 7).text(): # register name is the 7th column
                     name = name.split("#/fields/")[1]
-                    fields[name] = self.getField(name) #TODO This method also searches though the dataHandles, could be optimitzed
+                    fields[name] = self.getField(name) #TODO This method also searches though the objectHandles, could be optimitzed
 
         return fields
 
 
     def newRegister(self):
-        names = [name for name in self.dataHandles.keys() if name.startswith("#/registers/newRegister")]
+        names = [name for name in self.objectHandles.keys() if name.startswith("#/registers/newRegister")]
         if len(names):
             num = 1
             for name in names:
@@ -303,8 +413,6 @@ class Window(QtWidgets.QMainWindow):
             'length': 0
         }
         self.addRegister(name,register)
-
-        #TODO check if there are fields that are already pointing to this new register
 
 
     registerLayoutView = None
@@ -392,12 +500,12 @@ class Window(QtWidgets.QMainWindow):
 
     def deleteRegister(self, name):
         key = "#/registers/" + name
-        if key not in self.dataHandles:
+        if key not in self.objectHandles:
             return False
 
-        item = self.dataHandles[key]
+        item = self.objectHandles[key]
         if isinstance(item, RegisterItem):
-            del self.dataHandles[key]
+            del self.objectHandles[key]
             index = item.index()
             self.RegistersModel.removeRow(index.row(), index.parent())
 
@@ -413,49 +521,83 @@ class Window(QtWidgets.QMainWindow):
 
     def deleteField(self, name):
         key = "#/fields/" + name
-        if key not in self.dataHandles:
+        if key not in self.objectHandles:
             return False
 
-        item = self.dataHandles[key]
-        if isinstance(item, FieldItem) and key in self.dataHandles:
+        item = self.objectHandles[key]
+        if isinstance(item, FieldItem) and key in self.objectHandles:
             register = self.getField(name)['register'].split("#/registers/")[1]
             self.removeFieldOfRegisterTree(register, name)
 
-            del self.dataHandles[key]
+            del self.objectHandles[key]
             index = item.index()
             self.FieldsModel.removeRow(index.row(), index.parent())
 
     def removeFieldOfRegisterTree(self, registername, fieldname):
 
         registerkey = f'#/registers/{registername}'
-        if registerkey not in self.dataHandles:
+        if registerkey not in self.objectHandles:
             return False
 
-        registerHandle = self.dataHandles[registerkey]
+        registerHandle = self.objectHandles[registerkey]
+        registerModel = self.RegistersModel.item(registerHandle.index().row())
 
-        registerfieldkey = f'#/registers/{registername}.FIELD{fieldname}'
-        if registerfieldkey not in self.dataHandles:
-            return False
+        index = None
 
-        registerfieldHandle = self.dataHandles[registerfieldkey]
-        self.RegistersModel.item(registerHandle.index().row()).removeRow(registerfieldHandle.index().row())
+        for i in range(registerModel.rowCount()):
+            field = registerModel.child(i,0)
+            if field.text() == fieldname:
+                index = i;
 
-        del self.dataHandles[registerfieldkey]
-
+        if index is not None:
+            registerModel.removeRow(index)
 
     def setObject(self, address, value):
-        if address in self.dataHandles:
-            if isinstance(self.dataHandles[address], QtWidgets.QLabel):
-                self.dataHandles[address].setText(value)
-            elif isinstance(self.dataHandles[address], QtWidgets.QLineEdit):
-                self.dataHandles[address].setText(value)
-            elif isinstance(self.dataHandles[address], QtWidgets.QGroupBox):
+        if address in self.objectHandles:
+            if isinstance(self.objectHandles[address], QtWidgets.QLabel):
+                self.objectHandles[address].setText(value)
+            elif isinstance(self.objectHandles[address], QtWidgets.QLineEdit):
+                self.objectHandles[address].setText(value)
+            elif isinstance(self.objectHandles[address], QtWidgets.QGroupBox):
                 subaddress = f'{address}.{value}'
-                self.dataHandles[subaddress].setChecked(True)
-            elif isinstance(self.dataHandles[address], QtWidgets.QSpinBox):
-                self.dataHandles[address].setValue(value)
+                self.objectHandles[subaddress].setChecked(True)
+            elif isinstance(self.objectHandles[address], QtWidgets.QSpinBox):
+                self.objectHandles[address].setValue(value)
             else:
-                self.addlog(f"cannot set object {address} of type {type(self.dataHandles[address])}")
+                self.addlog(f"cannot set object {address} of type {type(self.objectHandles[address])}")
+        else:
+            self.addlog(f"{address} doesn't exist in the UI")
+
+    def getObject(self, address):
+        if address in self.objectHandles:
+            if isinstance(self.objectHandles[address], QtWidgets.QLabel):
+                return self.objectHandles[address].text()
+            elif isinstance(self.objectHandles[address], QtWidgets.QLineEdit):
+                text = self.objectHandles[address].text()
+                if text == "":
+                    return None
+                else:
+                    return text
+            elif isinstance(self.objectHandles[address], QtWidgets.QGroupBox):
+                for key in self.objectHandles:
+                    if key.startswith(address) and key != address:
+                        name = key.replace(address + ".", "")
+                        if self.objectHandles[key].isChecked():
+                            return name
+                return None
+            elif isinstance(self.objectHandles[address], QtWidgets.QRadioButton):
+                pass
+            elif isinstance(self.objectHandles[address], QtWidgets.QSpinBox):
+                return self.objectHandles[address].value()
+            elif isinstance(self.objectHandles[address], RegisterItem):
+                return self.getRegister(address.split("/")[-1])
+            elif isinstance(self.objectHandles[address], FieldItem):
+                return self.getField(address.split("/")[-1])
+
+
+            else:
+                print(f"cannot retrieve object {address} of type {type(self.objectHandles[address])}")
+                self.addlog(f"cannot retrieve object {address} of type {type(self.objectHandles[address])}")
         else:
             self.addlog(f"{address} doesn't exist in the UI")
 
@@ -574,7 +716,7 @@ class Window(QtWidgets.QMainWindow):
 
     def createRadioObject(self, name, description, obj, parent, basename):
         groupbox = QtWidgets.QGroupBox()
-        self.dataHandles[basename] = groupbox
+        self.objectHandles[basename] = groupbox
         groupboxlayout = QtWidgets.QVBoxLayout()
         groupbox.setLayout(groupboxlayout)
         groupbox.setToolTip(description)
@@ -583,13 +725,14 @@ class Window(QtWidgets.QMainWindow):
             radiobutton = QtWidgets.QRadioButton(option)
             groupboxlayout.addWidget(radiobutton)
             handlename = f'{basename}.{option}'
-            self.dataHandles[handlename] = radiobutton
+            self.objectHandles[handlename] = radiobutton
 
         parent.addRow(name, groupbox)
 
+
     def createCheckBoxObject(self, name, description, obj, parent, basename):
         groupbox = QtWidgets.QGroupBox()
-        self.dataHandles[basename] = groupbox
+        self.objectHandles[basename] = groupbox
         groupboxlayout = QtWidgets.QVBoxLayout()
         groupbox.setLayout(groupboxlayout)
         groupbox.setToolTip(description)
@@ -598,14 +741,16 @@ class Window(QtWidgets.QMainWindow):
             radiobutton = QtWidgets.QCheckBox(option)
             groupboxlayout.addWidget(radiobutton)
             handlename = f'{basename}.{option}'
-            self.dataHandles[handlename] = radiobutton
+            self.objectHandles[handlename] = radiobutton
+
 
         parent.addRow(name, groupbox)
+
 
     def createLineObject(self, name, description, obj, parent, basename):
         lineedit = QtWidgets.QLineEdit()
         lineedit.setToolTip(description)
-        self.dataHandles[basename] = lineedit
+        self.objectHandles[basename] = lineedit
         parent.addRow(name, lineedit)
 
     def createSpinBoxObject(self, name, description, obj, parent, basename, type='double'):
@@ -615,7 +760,7 @@ class Window(QtWidgets.QMainWindow):
             spinbox = QtWidgets.QSpinBox()
         spinbox.setRange(0,1000000000)
         spinbox.setToolTip(description)
-        self.dataHandles[basename] = spinbox
+        self.objectHandles[basename] = spinbox
         parent.addRow(name, spinbox)
 
     def expandObject(self, name, obj, parent, basename):
@@ -638,13 +783,14 @@ class Window(QtWidgets.QMainWindow):
         elif 'anyOf' in obj:
             for data in obj['anyOf']:
                 if 'enum' in data:
-                    self.createCheckBoxObject(
+                    self.createRadioObject(
                         name,
                         description,
                         data,
                         parent,
                         handlename
                     )
+                    #TODO Licenses can also be a string
         elif 'type' not in obj or obj['type'] == 'string':
             self.createLineObject(
                 name,

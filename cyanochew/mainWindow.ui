@@ -156,7 +156,8 @@
     </property>
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>
-    <addaction name="actionSave_As"/>
+    <addaction name="actionSaveAs"/>
+    <addaction name="actionSaveCopy"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
@@ -167,13 +168,27 @@
    </property>
   </action>
   <action name="actionSave">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Save</string>
    </property>
   </action>
-  <action name="actionSave_As">
+  <action name="actionSaveAs">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Save As</string>
+   </property>
+  </action>
+  <action name="actionSaveCopy">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Save Copy</string>
    </property>
   </action>
  </widget>
