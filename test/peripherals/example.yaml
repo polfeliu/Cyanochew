@@ -1,167 +1,159 @@
-# Copyright (C) 2020 Google Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# Datasheet: http://www.ti.com/lit/ds/symlink/ads1015.pdf
 cyanobyte: 0.1.0
-info:
-  contact:
-    name: Nick Felker
-    url: https://github.com/google/cyanobyte
-    email: felker@google.com
-  package: com.cyanobyte
-  title: Example
-  description: Example of a package
-  copyright:
-    name: Google Inc.
-    date: '2019'
-  license:
-    name: Apache-2.0
-  version: 0.1.0
-  'x-foo': 'x-bar'
-
-i2c:
-  addressType: 7-bit
-  address:
-    - 0x10
-    - 0x20
-    - 0x30
-  addressMask: 0xFF
-
-registers:
-  RegisterA:
-    address: 0x00
-    length: 8
-    title: First example
-    description: An 8-bit register
-  RegisterB:
-    address: 0x01
-    length: 16
-    title: Second example
-    description: A 16-bit register
-  RegisterC:
-    address: 0x02
-    length: 32
-    title: Third example
-    description: A 32-bit register
-  RegisterD:
-    address: 0x03
-    length: 0
-    title: Fourth example
-    description: A dummy register that has no data
-
+extensions:
+  foo: bar
 fields:
   FieldA:
-    title: Read-only fields for RegisterA
-    description: This is a few bits
-    register: '#/registers/RegisterA'
-    readWrite: 'R'
-    bitStart: 7
     bitEnd: 4
+    bitStart: 7
+    description: This is a few bits
+    enum: []
+    readWrite: R
+    register: '#/registers/RegisterA'
+    title: Read-only fields for RegisterA
     type: number
   FieldB:
-    title: Write-only fields for RegisterA
-    description: This is fewer bits
-    register: '#/registers/RegisterA'
-    readWrite: 'W'
-    bitStart: 3
     bitEnd: 2
-    type: enum
+    bitStart: 3
+    description: This is fewer bits
     enum:
       VAL_1:
         title: Value 1
-        value: 0b0001
+        value: 1
       VAL_2:
         title: Value 2
-        value: 0b0010
+        value: 2
       VAL_3:
         title: Value 3
-        value: 0b0100
+        value: 4
       VAL_4:
         title: Value 4
-        value: 0b1000
-  FieldC:
-    title: Read/write field for RegisterA
-    description: A single-bit
+        value: 8
+    readWrite: W
     register: '#/registers/RegisterA'
-    readWrite: 'R/W'
-    bitStart: 1
+    title: Write-only fields for RegisterA
+    type: enum
+  FieldC:
     bitEnd: 1
+    bitStart: 1
+    description: A single-bit
+    enum: []
+    readWrite: R/W
+    register: '#/registers/RegisterA'
+    title: Read/write field for RegisterA
     type: number
   FieldD:
-    title: This field should never appear
-    description: A bit that is neither readable nor writeable
-    register: '#/registers/RegisterC'
-    readWrite: 'n'
-    bitStart: 0
     bitEnd: 0
+    bitStart: 0
+    description: A bit that is neither readable nor writeable
+    enum: []
+    readWrite: n
+    register: '#/registers/RegisterC'
+    title: This field should never appear
     type: number
-
 functions:
   Return:
-    title: Return a value
+    computed:
+      Array:
+        logic:
+        - summation:
+          - sum:
+            - 1024
+            - 1024
+        - send: summation
+        return:
+        - summation
+        - summation
+        variables:
+          summation: int16
+      Number:
+        logic:
+        - summation:
+          - sum:
+            - 1024
+            - 1024
+        - send: summation
+        return: summation
+        variables:
+          summation: int16
+      Void:
+        logic:
+        - summation:
+          - sum:
+            - 1024
+            - 1024
+        - send: summation
+        variables:
+          summation: int16
     description: Computes and returns
     register: '#/registers/RegisterA'
-    computed:
-      Number:
-        variables:
-          summation: int16
-        logic:
-          - summation:
-            - sum:
-              - 1024
-              - 1024
-          - send: summation
-        return: summation
-      Array:
-        variables:
-          summation: int16
-        logic:
-          - summation:
-            - sum:
-              - 1024
-              - 1024
-          - send: summation
-        return:
-          - summation
-          - summation
-      Void:
-        variables:
-          summation: int16
-        logic:
-          - summation:
-            - sum:
-              - 1024
-              - 1024
-          - send: summation
+    title: Return a value
   _lifecycle:
-    title: Code to run when device class is constructed
-    description: Enables features on device
-    register: '#/registers/RegisterA'
     computed:
       Begin:
+        logic:
+        - output: = 1
+        - send: output
+        return: output
         variables:
           output: int8
-        logic:
-          - output: = 1
-          - send: output
-        return: output
       End:
+        logic:
+        - output: = 1
+        - send: output
+        return: output
         variables:
           output: int8
-        logic:
-          - output: = 1
-          - send: output
-        return: output
-
-extensions:
-  foo: bar
+    description: Enables features on device
+    register: '#/registers/RegisterA'
+    title: Code to run when device class is constructed
+i2c:
+  address:
+  - 16
+  - 32
+  - 48
+  addressMask: 255
+  addressType: 7-bit
+info:
+  contact:
+    email: felker@google.com
+    name: Nick Felker
+    url: https://github.com/google/cyanobyte
+  copyright:
+    date: '2019'
+    name: Google Inc.
+  description: Example of a package
+  license:
+    name: Apache-2.0
+  package: com.cyanobyte
+  title: Example
+  version: 0.1.0
+  x-foo: x-bar
+registers:
+  RegisterA:
+    address: 0
+    description: An 8-bit register
+    length: 8
+    readWrite: ND
+    signed: ND
+    title: First example
+  RegisterB:
+    address: 1
+    description: A 16-bit register
+    length: 16
+    readWrite: ND
+    signed: ND
+    title: Second example
+  RegisterC:
+    address: 2
+    description: A 32-bit register
+    length: 32
+    readWrite: ND
+    signed: ND
+    title: Third example
+  RegisterD:
+    address: 3
+    description: A dummy register that has no data
+    length: 0
+    readWrite: ND
+    signed: ND
+    title: Fourth example
