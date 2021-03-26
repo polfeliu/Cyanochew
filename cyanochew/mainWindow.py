@@ -211,7 +211,7 @@ class Window(QtWidgets.QMainWindow):
             elif isinstance(item, dict):
                 self.dataToObjects(item, address)
             elif isinstance(item, list):
-                self.setObject(address, str(item).strip('[]'))
+                self.setObject(address, item)
             else:
                 self.addlog(f"Cannot Set object {address}")
 
@@ -427,15 +427,18 @@ class Window(QtWidgets.QMainWindow):
 
     def setObject(self, address, value):
         if address in self.objectHandles:
-            if isinstance(self.objectHandles[address], QtWidgets.QLabel):
-                self.objectHandles[address].setText(value)
-            elif isinstance(self.objectHandles[address], QtWidgets.QLineEdit):
-                self.objectHandles[address].setText(value)
-            elif isinstance(self.objectHandles[address], QtWidgets.QGroupBox):
+            obj = self.objectHandles[address]
+            if isinstance(obj, QtWidgets.QLabel):
+                obj.setText(value)
+            elif isinstance(obj, ArrayEdit):
+                obj.setArray(value)
+            elif isinstance(obj, QtWidgets.QLineEdit):
+                obj.setText(value)
+            elif isinstance(obj, QtWidgets.QGroupBox):
                 subaddress = f'{address}.{value}'
                 self.objectHandles[subaddress].setChecked(True)
-            elif isinstance(self.objectHandles[address], QtWidgets.QSpinBox):
-                self.objectHandles[address].setValue(value)
+            elif isinstance(obj, QtWidgets.QSpinBox):
+                obj.setValue(value)
             else:
                 self.addlog(f"cannot set object {address} of type {type(self.objectHandles[address])}")
         else:
@@ -443,28 +446,31 @@ class Window(QtWidgets.QMainWindow):
 
     def getObject(self, address):
         if address in self.objectHandles:
-            if isinstance(self.objectHandles[address], QtWidgets.QLabel):
-                return self.objectHandles[address].text()
-            elif isinstance(self.objectHandles[address], QtWidgets.QLineEdit):
-                text = self.objectHandles[address].text()
+            obj = self.objectHandles[address]
+            if isinstance(obj, QtWidgets.QLabel):
+                return obj.text()
+            elif isinstance(obj, ArrayEdit):
+                return obj.getArray()
+            elif isinstance(obj, QtWidgets.QLineEdit):
+                text = obj.text()
                 if text == "":
                     return None
                 else:
                     return text
-            elif isinstance(self.objectHandles[address], QtWidgets.QGroupBox):
+            elif isinstance(obj, QtWidgets.QGroupBox):
                 for key in self.objectHandles:
                     if key.startswith(address) and key != address:
                         name = key.replace(address + ".", "")
                         if self.objectHandles[key].isChecked():
                             return name
                 return None
-            elif isinstance(self.objectHandles[address], QtWidgets.QRadioButton):
+            elif isinstance(obj, QtWidgets.QRadioButton):
                 pass
-            elif isinstance(self.objectHandles[address], QtWidgets.QSpinBox):
+            elif isinstance(obj, QtWidgets.QSpinBox):
                 return self.objectHandles[address].value()
-            elif isinstance(self.objectHandles[address], Register):
+            elif isinstance(obj, Register):
                 return self.getRegister(address.split("/")[-1]).toData()
-            elif isinstance(self.objectHandles[address], Field):
+            elif isinstance(obj, Field):
                 return self.getField(address.split("/")[-1]).toData()
             else:
                 print(f"cannot retrieve object {address} of type {type(self.objectHandles[address])}")
@@ -592,6 +598,12 @@ class Window(QtWidgets.QMainWindow):
     def createFunctionsUI(self):
         pass#TODO
 
+    def createArrayObject(self, name, description, obj, parent, basename):
+        arrayedit = ArrayEdit()
+        arrayedit.setToolTip(description)
+        self.objectHandles[basename] = arrayedit
+        parent.addRow(name, arrayedit)
+
     def createRadioObject(self, name, description, obj, parent, basename):
         groupbox = QtWidgets.QGroupBox()
         self.objectHandles[basename] = groupbox
@@ -649,8 +661,15 @@ class Window(QtWidgets.QMainWindow):
         else:
             description = ""
 
-        if 'enum' in obj:
-
+        if handlename == "#/i2c/address":
+            self.createArrayObject(
+                name,
+                description,
+                obj,
+                parent,
+                handlename
+            )
+        elif 'enum' in obj:
             self.createRadioObject(
                 name,
                 description,
@@ -669,7 +688,7 @@ class Window(QtWidgets.QMainWindow):
                         handlename
                     )
                     #TODO Licenses can also be a string
-        elif 'type' not in obj or obj['type'] == 'string':
+        elif obj['type'] == 'string':
             self.createLineObject(
                 name,
                 description,
@@ -700,6 +719,19 @@ class Window(QtWidgets.QMainWindow):
                 self.expandObject(childname, childobject, form, handlename)
         else:
             self.addlog(f"Cannot expand object {handlename} when loading the spec")
+
+class ArrayEdit(QtWidgets.QLineEdit):
+
+    def setArray(self, val):
+        if not isinstance(val, list):
+            val = [val] #encapsulate
+
+        self.setText(str(val).strip('[]'))
+
+    def getArray(self):
+        #TODO Conversion to int for the address array. Maybe at the start we could store the types... (?)
+        # Now if one of the items is not int()able the program crashes
+        return [int(s.strip()) for s in self.text().split(",")]
 
 
 app = QtWidgets.QApplication([])
