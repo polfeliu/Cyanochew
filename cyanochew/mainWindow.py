@@ -137,7 +137,12 @@ class Window(QtWidgets.QMainWindow):
     openedFile = None
 
     def saveFile(self, path: str, copy: bool = False):
+        if path == "": #TODO It should also check if the folder exists
+            #TODO Throw dialog
+            return False
+
         data = self.objectsToData()
+        print('path',type(path))
         with open(path, 'w') as f:
             yaml.dump(data, f)
 
