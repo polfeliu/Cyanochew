@@ -5,17 +5,11 @@ from PyQt5.Qt import QStandardItemModel, QStandardItem
 import json
 import sys
 import yaml
-
+from Field import Field, FieldItem
+from Register import Register, RegisterItem
 from pprint import pprint
 
-from Models import RegisterItem, FieldItem
-
 from registerLayout import RegisterLayoutView
-
-
-# TODO Show data in Hex/Decimal/Binary
-# TODO Improve edit of lists (for example i2c addresses)
-
 
 class Window(QtWidgets.QMainWindow):
 
@@ -103,11 +97,11 @@ class Window(QtWidgets.QMainWindow):
 
     data = None
 
-    def addlog(self, msg):
+    def addlog(self, msg: str):
         self.log.appendPlainText(msg)
 
     def reset(self):
-        for name, handle in self.objectHandles.items():
+        for name, handle in self.objectHandles.items(): #TODO Missing objects
             if isinstance(handle, QtWidgets.QGroupBox):
                 pass
             elif isinstance(handle, QtWidgets.QCheckBox):
@@ -123,7 +117,7 @@ class Window(QtWidgets.QMainWindow):
         self.enableI2C(False)
         self.openedFile = None
 
-    def openFile(self, path):
+    def openFile(self, path: str):
         with open(path) as f:
             data = yaml.load(f, Loader=yaml.FullLoader)
 
@@ -142,7 +136,7 @@ class Window(QtWidgets.QMainWindow):
     originalData = None
     openedFile = None
 
-    def saveFile(self, path, copy=False):
+    def saveFile(self, path: str, copy: bool = False):
         data = self.objectsToData()
         with open(path, 'w') as f:
             yaml.dump(data, f)
@@ -151,11 +145,10 @@ class Window(QtWidgets.QMainWindow):
             self.openedFile = path
             self.originalData = data
 
-
     def objectsToData(self):
         data = {}
 
-        def addData(address, d):
+        def addData(address: str, d: dict):
             keys = address.split("/")
             keys.pop(0) #Remove '#'
             loc = data
@@ -190,19 +183,19 @@ class Window(QtWidgets.QMainWindow):
 
         return data
 
-    def enableI2C(self, set):
+    def enableI2C(self, set: bool):
         self.I2CEnable.setChecked(set)
         for name, handle in self.objectHandles.items():
             if name.startswith("#/i2c/"):
                 handle.setEnabled(set)
 
-    def enableSPI(self, set):
+    def enableSPI(self, set: bool):
         self.SPIEnable.setChecked(set)
         for name, handle in self.objectHandles.items():
             if name.startswith("#/spi/"):
                 handle.setEnabled(set)
 
-    def dataToObjects(self, data, baseaddress="#"):
+    def dataToObjects(self, data: dict, baseaddress: str ="#"):
         for key, item in data.items():
             address= f'{baseaddress}/{key}'
             if address == "#/registers":
@@ -222,174 +215,59 @@ class Window(QtWidgets.QMainWindow):
             else:
                 self.addlog(f"Cannot Set object {address}")
 
-    def addField(self, name, field):
-        if 'title' not in field:
-            field['title'] = "" #required
+    def addField(self, name: str, field: dict):
+        f = Field(name, field)
+        self.FieldsTreeRoot.appendRow(f.getFieldViewRow())
+        self.objectHandles["#/fields/" + name] = f #TODO
+        self.addFieldToRegisterTree(f)
 
-        if 'description' not in field:
-            field['description'] = "" #required
-
-        if 'register' not in field:
-            field['register'] = "ND"
-
-        if 'readWrite' not in field:
-            field['readWrite'] = "ND" #required
-            #Must be R, R/W, W, n
-
-        if 'bitStart' not in field:
-            field['bitStart'] = 0;
-
-        if 'bitEnd' not in field:
-            field['bitEnd'] = 0
-
-        if 'type' not in field:
-            field['type'] = 0
-            #Must enum, number
-
-        if 'enum' not in field:
-            field['enum'] = []
-            #TODO
-
-        registername = field['register'].split("#/registers/")[1]
-
-        self.FieldsTreeRoot.appendRow([
-            FieldItem(name),
-            QStandardItem(field['readWrite']),
-            QStandardItem(str(field['bitStart'])),
-            QStandardItem(str(field['bitEnd'])),
-            QStandardItem(field['type']),
-            QStandardItem(field['title']),
-            QStandardItem(field['description']),
-            QStandardItem(registername),
-        ])
-
-        address = "#/fields/" + name
-        self.objectHandles[address] = self.FieldsTreeRoot.child(self.FieldsModel.rowCount() - 1)
-
-        self.addFieldToRegisterTree(
-            registername,
-            name,
-            field
-        )
-
-    def getField(self, fieldname):
+    def getField(self, fieldname: str):
         address = "#/fields/" + fieldname
-        field = {}
-        for name, item in self.objectHandles.items(): #TODO Why did I use a loop to search this KEY? It should be access directly...
-            if name == address and isinstance(item, FieldItem):
-                field['readWrite']  = self.FieldsModel.item(item.index().row(), 1).text()
-                field['bitStart']   = int(self.FieldsModel.item(item.index().row(), 2).text())
-                field['bitEnd']     = int(self.FieldsModel.item(item.index().row(), 3).text())
-                field['type']       = self.FieldsModel.item(item.index().row(), 4).text()
-                field['title']      = self.FieldsModel.item(item.index().row(), 5).text()
-                field['description']= self.FieldsModel.item(item.index().row(), 6).text()
-                field['register']   = self.FieldsModel.item(item.index().row(), 7).text()
-                field['register'] = "#/registers/" + field['register']
+
+        if address in self.objectHandles:
+            field = self.objectHandles[address]
+            if isinstance(field, Field):
                 return field
-
         return False
-        #TODO Support Enums
 
+    def addRegister(self, name: str, register:dict):
+        r = Register(name, register)
 
-    def setField(self, fieldname, field):
-        pass#TODO
-
-    def addRegister(self, name, register):
-        if 'title' not in register:
-            register['title'] = "" #required
-
-        if 'description' not in register:
-            register['description'] = "" #required
-
-        if 'address' not in register:
-            register['address'] = 0 #required
-
-        if 'length' not in register:
-            register['length'] = 0 #required
-
-        if 'signed' not in register:
-            register['signed'] = "ND"
-
-        if 'readWrite' not in register:
-            register['readWrite'] = "ND"
-
-        self.RegistersTreeRoot.appendRow([
-            RegisterItem(name),
-            QStandardItem(str(register['address'])),
-            QStandardItem(str(register['length'])),
-            QStandardItem(register['signed']),
-            QStandardItem(register['readWrite']),
-            QStandardItem(register['title']),
-            QStandardItem(register['description']),
-        ])
+        self.RegistersTreeRoot.appendRow(r.getRegisterViewRow())
 
         address = "#/registers/" + name
-        self.objectHandles[address] = self.RegistersTreeRoot.child(self.RegistersModel.rowCount() - 1)
+        self.objectHandles[address] = r
 
-        #Check if fields point to this register
+        #Check if there are fields point to this register
         for fieldname, field in self.getFieldsOfRegister(name).items():
-            self.addFieldToRegisterTree(
-                name,
-                fieldname,
-                field
-            )
+            self.addFieldToRegisterTree(field)
 
     def getRegister(self, registername):
         address = "#/registers/" + registername
-        if address not in self.objectHandles:
-            return False
+        if address in self.objectHandles:
+            register = self.objectHandles[address]
+            if isinstance(register, Register):
+                return register
 
-        register = {}
-        han = self.objectHandles[address]
-        register['address']     = int(self.RegistersModel.item(han.index().row(), 1).text())#required
-        register['length']      = int(self.RegistersModel.item(han.index().row(), 2).text())#required
-        register['signed']      = self.RegistersModel.item(han.index().row(), 3).text()
-        register['readWrite']   = self.RegistersModel.item(han.index().row(), 4).text()
-        register['title']       = self.RegistersModel.item(han.index().row(), 5).text()#required
-        register['description'] = self.RegistersModel.item(han.index().row(), 6).text()#required
+        return False
 
-        if register['signed'] == "ND":
-            del register['signed']
-
-        if register['readWrite'] == "ND":
-            del register['readWrite']
-
-        return register
-
-    def setRegister(self, registername, register):
-        pass#TODO
-
-    def addFieldToRegisterTree(self, registername, name, field):
-
+    def addFieldToRegisterTree(self, field: Field):
+        registername = field.getRegisterName()
         if "#/registers/" + registername not in self.objectHandles:
             return False
 
         register = self.objectHandles["#/registers/" + registername]
-
-        null = QStandardItem("")
-        null.setEditable(False)
-
-        handle = QStandardItem(name)
-        register.appendRow([
-            handle,
-            null,
-            QStandardItem(str(abs(field['bitStart'] - field['bitEnd'] + 1))),
-            null,
-            null,
-            QStandardItem(field['title']),
-            QStandardItem(field['description'])
-        ])
+        if isinstance(register, Register):
+            register.addFieldToTree(field)
 
     def getFieldsOfRegister(self, registername):
         fields = {}
-        for name, item in self.objectHandles.items():
-            if isinstance(item, FieldItem):
-                if registername == self.FieldsModel.item(item.index().row(), 7).text(): # register name is the 7th column
-                    name = name.split("#/fields/")[1]
-                    fields[name] = self.getField(name) #TODO This method also searches though the objectHandles, could be optimitzed
-
+        for address, item in self.objectHandles.items():
+            if isinstance(item, Field):
+                if registername == item.getRegisterName():
+                    name = address.split("#/fields/")[1]
+                    fields[name] = item
         return fields
-
 
     def newRegister(self):
         names = [name for name in self.objectHandles.keys() if name.startswith("#/registers/newRegister")]
@@ -414,14 +292,12 @@ class Window(QtWidgets.QMainWindow):
         }
         self.addRegister(name,register)
 
-
     registerLayoutView = None
 
-    def registerLayoutViewSave(self):
+    def registerLayoutViewSave(self): #TODO
         #delete fields of register
         for name, field in self.getFieldsOfRegister(self.editingRegister).items():
             self.deleteField(name)
-
 
         #create updated fields
         for fieldarray in self.registerLayoutView.registerLayout.fields:
@@ -445,7 +321,7 @@ class Window(QtWidgets.QMainWindow):
 
     editingRegister = None
 
-    def editRegisterSelected(self):
+    def editRegisterSelected(self):#TODO
         index = self.RegisterTree.currentIndex()
 
         if index.parent().isValid(): #if it has parent it is a field, not a register
@@ -495,7 +371,6 @@ class Window(QtWidgets.QMainWindow):
         item = self.RegistersModel.item(index.row())
 
         if isinstance(item, RegisterItem):
-            pass
             self.deleteRegister(item.text())
 
     def deleteRegister(self, name):
@@ -503,12 +378,10 @@ class Window(QtWidgets.QMainWindow):
         if key not in self.objectHandles:
             return False
 
-        item = self.objectHandles[key]
-        if isinstance(item, RegisterItem):
+        register = self.objectHandles[key]
+        if isinstance(register, Register):
             del self.objectHandles[key]
-            index = item.index()
-            self.RegistersModel.removeRow(index.row(), index.parent())
-
+            self.RegistersModel.removeRow(register.getRegisterViewRowIndex())
 
     def newField(self):
         pass#TODO
@@ -518,29 +391,29 @@ class Window(QtWidgets.QMainWindow):
         item = self.FieldsModel.item(index.row())
         self.deleteField(item.text())
 
-
-    def deleteField(self, name):
+    def deleteField(self, name: str):
         key = "#/fields/" + name
         if key not in self.objectHandles:
             return False
 
-        item = self.objectHandles[key]
-        if isinstance(item, FieldItem) and key in self.objectHandles:
-            register = self.getField(name)['register'].split("#/registers/")[1]
-            self.removeFieldOfRegisterTree(register, name)
+        field = self.objectHandles[key]
+        if isinstance(field, Field):
+            registername = field.getRegisterName()
+            self.removeFieldOfRegisterTree(registername, name)
 
             del self.objectHandles[key]
-            index = item.index()
-            self.FieldsModel.removeRow(index.row(), index.parent())
+            self.FieldsModel.removeRow(field.getFieldViewRowIndex())
 
-    def removeFieldOfRegisterTree(self, registername, fieldname):
+    def removeFieldOfRegisterTree(self, registername: str, fieldname: str):
 
         registerkey = f'#/registers/{registername}'
         if registerkey not in self.objectHandles:
             return False
 
-        registerHandle = self.objectHandles[registerkey]
-        registerModel = self.RegistersModel.item(registerHandle.index().row())
+        register = self.objectHandles[registerkey]
+        if not isinstance(register, Register):
+            return False
+        registerModel = self.RegistersModel.item(register.getRegisterViewRowIndex())
 
         index = None
 
@@ -660,8 +533,9 @@ class Window(QtWidgets.QMainWindow):
         #Model
         self.RegistersModel = QStandardItemModel()
         self.RegistersModel.setHorizontalHeaderLabels(["Name", "Address", "Length", "Signed", "R/W", "Title", "Description"])
-        #self.RegistersModel.dataChanged.connect(...) TODO
+        self.RegistersModel.itemChanged.connect(self.RegistersItemChanged)
         self.RegistersTreeRoot = self.RegistersModel.invisibleRootItem()
+
 
         # TreeView
         self.RegisterTree = QtWidgets.QTreeView()
@@ -676,6 +550,12 @@ class Window(QtWidgets.QMainWindow):
 
 
         self.Registers.addWidget(self.RegisterTree)
+
+    def RegistersItemChanged(self, item):
+        if item.parent() is None: #Doens't have parent, thus its a register, not a field
+            registername = self.RegistersModel.item(item.index().row(), 0).text()
+            register = self.getRegister(registername)
+            print(type(item))
 
     def createFieldsUI(self):
         # Button
