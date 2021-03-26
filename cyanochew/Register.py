@@ -1,23 +1,39 @@
-import sys
 from PyQt5.Qt import QStandardItem
 from Field import Field
+from typing import Union, Optional
 
 
-class RegisterItem(QStandardItem):pass
-class RegisterTitle(QStandardItem):pass
-class RegisterDescription(QStandardItem):pass
-class RegisterAddress(QStandardItem):
+class RegisterItem(QStandardItem):
+    pass
+
+
+class RegisterTitle(QStandardItem): #Required
+    pass
+
+
+class RegisterDescription(QStandardItem): #Required
+    pass
+
+
+class RegisterAddress(QStandardItem): #Required
     def __init__(self, address: int):
         super().__init__(str(address))
-class RegisterLength(QStandardItem):
+
+
+class RegisterLength(QStandardItem): #Required
     def __init__(self, length):
         super().__init__(str(length))
-class RegisterSigned(QStandardItem):pass
-class RegisterReadWrite(QStandardItem):pass
+
+
+class RegisterSigned(QStandardItem):
+    pass
+
+
+class RegisterReadWrite(QStandardItem):
+    pass
 
 
 class Register:
-
     RegisterItem = None
 
     title = None
@@ -38,27 +54,27 @@ class Register:
         if 'description' in data:
             self.description = RegisterDescription(data['description'])
         else:
-            self.description = RegisterDescription()
+            self.description = RegisterDescription("")
 
         if 'address' in data:
             self.address = RegisterAddress(data['address'])
         else:
-            self.address = RegisterAddress()
+            self.address = RegisterAddress(0)
 
         if 'length' in data:
             self.length = RegisterLength(data['length'])
         else:
-            self.length = RegisterLength()
+            self.length = RegisterLength(0)
 
         if 'signed' in data:
             self.signed = RegisterSigned(data['signed'])
         else:
-            self.signed = RegisterSigned()
+            self.signed = RegisterSigned("")
 
         if 'readWrite' in data:
             self.readWrite = RegisterReadWrite(data['readWrite'])
         else:
-            self.readWrite = RegisterReadWrite()
+            self.readWrite = RegisterReadWrite("")
 
     def toData(self):
         register = {}
