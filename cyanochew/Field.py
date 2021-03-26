@@ -2,8 +2,12 @@ import sys
 from PyQt5.Qt import QStandardItem
 
 class FieldItem(QStandardItem):pass
-class FieldBitEnd(QStandardItem):pass
-class FieldBitStart(QStandardItem):pass
+class FieldBitEnd(QStandardItem):
+    def __init__(self, bitEnd):
+        super().__init__(str(bitEnd))
+class FieldBitStart(QStandardItem):
+    def __init__(self, bitStart):
+        super().__init__(str(bitStart))
 class FieldDescription(QStandardItem):pass
 class FieldEnum(QStandardItem):pass
 class FieldReadWrite(QStandardItem):pass
@@ -58,8 +62,8 @@ class Field:
             self.registerViewDescription = FieldDescription()
         self.registerViewDescription.setEditable(False)
 
-        if 'enum' in data:
-            pass#TODO
+        if 'enum' in data: #TODO, for now storing the data on the same dict
+            self.enum = data['enum']
 
         if 'readWrite' in data: #Required
             self.readWrite = FieldReadWrite(data['readWrite'])
@@ -89,13 +93,14 @@ class Field:
 
     def toData(self):
         field = {} #TODO
-        field['readWrite'] = "asdf"
-        field['bitStart'] ="asdf"
-        field['bitEnd'] ="asdf"
-        field['type'] ="asdf"
+        field['readWrite'] = self.readWrite.text()
+        field['bitStart'] = int(self.bitStart.text())
+        field['bitEnd'] = int(self.bitEnd.text())
+        field['type'] = self.type.text()
         field['title'] = self.title.text()
-        field['description'] ="asdf"
-        field['register'] ="asdf"
+        field['description'] = self.description.text()
+        field['enum'] = self.enum
+        field['register'] = "#/registers/" + self.register.text()
         return field
 
     def getFieldViewRow(self):

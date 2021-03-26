@@ -6,8 +6,12 @@ from Field import Field
 class RegisterItem(QStandardItem):pass
 class RegisterTitle(QStandardItem):pass
 class RegisterDescription(QStandardItem):pass
-class RegisterAddress(QStandardItem):pass
-class RegisterLength(QStandardItem):pass
+class RegisterAddress(QStandardItem):
+    def __init__(self, address: int):
+        super().__init__(str(address))
+class RegisterLength(QStandardItem):
+    def __init__(self, length):
+        super().__init__(str(length))
 class RegisterSigned(QStandardItem):pass
 class RegisterReadWrite(QStandardItem):pass
 
@@ -57,13 +61,13 @@ class Register:
             self.readWrite = RegisterReadWrite()
 
     def toData(self):
-        register = {} #TODO
-        register['title'] = ""
-        register['description'] = ""
-        register['address'] = ""
-        register['length'] = ""
-        register['signed'] = ""
-        register['readWrite'] = ""
+        register = {}
+        register['title'] = self.title.text()
+        register['description'] = self.description.text()
+        register['address'] = int(self.address.text())
+        register['length'] = int(self.length.text())
+        register['signed'] = self.signed.text()
+        register['readWrite'] = self.readWrite.text()
         return register
 
     def getRegisterViewRow(self):

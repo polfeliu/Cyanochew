@@ -462,12 +462,10 @@ class Window(QtWidgets.QMainWindow):
                 pass
             elif isinstance(self.objectHandles[address], QtWidgets.QSpinBox):
                 return self.objectHandles[address].value()
-            elif isinstance(self.objectHandles[address], RegisterItem):
-                return self.getRegister(address.split("/")[-1])
-            elif isinstance(self.objectHandles[address], FieldItem):
-                return self.getField(address.split("/")[-1])
-
-
+            elif isinstance(self.objectHandles[address], Register):
+                return self.getRegister(address.split("/")[-1]).toData()
+            elif isinstance(self.objectHandles[address], Field):
+                return self.getField(address.split("/")[-1]).toData()
             else:
                 print(f"cannot retrieve object {address} of type {type(self.objectHandles[address])}")
                 self.addlog(f"cannot retrieve object {address} of type {type(self.objectHandles[address])}")
