@@ -1,11 +1,12 @@
 from PyQt5.Qt import QStandardItem
 from Field import Field
-from typing import Union, Optional
 
 
 class RegisterItem(QStandardItem):
-    pass
-
+    name = None
+    def __init__(self, name: str):
+        self.name = name
+        super().__init__(name)
 
 class RegisterTitle(QStandardItem): #Required
     pass

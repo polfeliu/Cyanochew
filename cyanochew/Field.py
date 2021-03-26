@@ -3,7 +3,10 @@ from PyQt5.Qt import QStandardItem
 
 
 class FieldItem(QStandardItem):
-    pass
+    name = None
+    def __init__(self, name: str):
+        self.name = name
+        super().__init__(name)
 
 
 class FieldBitEnd(QStandardItem):

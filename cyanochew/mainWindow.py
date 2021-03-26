@@ -556,10 +556,20 @@ class Window(QtWidgets.QMainWindow):
         self.Registers.addWidget(self.RegisterTree)
 
     def RegistersItemChanged(self, item):
-        if item.parent() is None: #Doens't have parent, thus its a register, not a field
-            registername = self.RegistersModel.item(item.index().row(), 0).text()
-            register = self.getRegister(registername)
-            print(type(item))
+        if isinstance(item, RegisterItem):
+            newname = self.RegistersModel.item(item.index().row(), 0).text()
+            oldname = item.name
+            item.name = newname #Update Name
+            #move handle of name
+            self.objectHandles[f'#/registers/{newname}'] = self.objectHandles.pop(f'#/registers/{oldname}')
+
+    def FieldsItemChanged(self, item):
+        if isinstance(item, FieldItem):
+            newname = self.FieldsModel.item(item.index().row(), 0).text()
+            oldname = item.name
+            item.name = newname #Update Name
+            self.objectHandles[f'#/fields/{newname}'] = self.objectHandles.pop(f'#/fields/{oldname}')
+            print(oldname, newname)
 
     def createFieldsUI(self):
         # Button
@@ -580,7 +590,7 @@ class Window(QtWidgets.QMainWindow):
         self.FieldsModel = QStandardItemModel()
         self.FieldsModel.setHorizontalHeaderLabels(
             ["Name", "R/W", "bitStart", "bitEnd", "type", "Title", "Description", "Register"])
-        # self.FieldModel.dataChanged.connect(...) TODO
+        self.FieldsModel.itemChanged.connect(self.FieldsItemChanged)
         self.FieldsTreeRoot = self.FieldsModel.invisibleRootItem()
 
         # TreeView
