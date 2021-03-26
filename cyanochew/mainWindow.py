@@ -556,7 +556,7 @@ class Window(QtWidgets.QMainWindow):
         self.Registers.addWidget(self.RegisterTree)
 
     def RegistersItemChanged(self, item):
-        if isinstance(item, RegisterItem):
+        if isinstance(item, RegisterItem): #Changed Name
             newname = self.RegistersModel.item(item.index().row(), 0).text()
             oldname = item.name
             item.name = newname #Update Name
@@ -564,12 +564,20 @@ class Window(QtWidgets.QMainWindow):
             self.objectHandles[f'#/registers/{newname}'] = self.objectHandles.pop(f'#/registers/{oldname}')
 
     def FieldsItemChanged(self, item):
-        if isinstance(item, FieldItem):
+        if isinstance(item, FieldItem): #Changed Name
             newname = self.FieldsModel.item(item.index().row(), 0).text()
             oldname = item.name
             item.name = newname #Update Name
+            #move handle of name
             self.objectHandles[f'#/fields/{newname}'] = self.objectHandles.pop(f'#/fields/{oldname}')
-            print(oldname, newname)
+            name = newname
+        else: #Changed Field props
+            name = self.FieldsModel.item(item.index().row(), 0).text()
+
+        field = self.getField(name)
+        if isinstance(field, Field):
+            field.itemDataChanged(item)
+
 
     def createFieldsUI(self):
         # Button

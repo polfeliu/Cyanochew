@@ -152,7 +152,7 @@ class Field:
             NullItem(),
             NullItem(),
             self.registerViewTitle,
-            self.registerViewTitle
+            self.registerViewDescription
         ]
 
     def getRegisterName(self):
@@ -160,3 +160,18 @@ class Field:
             return self.register.text()
         else:
             return False
+
+
+    def itemDataChanged(self, item): #Some data has to be also updated on the register view
+        if isinstance(item, FieldItem):
+            self.registerViewFieldItem.setText(
+                item.text()
+            )
+        elif isinstance(item, FieldTitle):
+            self.registerViewTitle.setText(
+                item.text()
+            )
+        elif isinstance(item, FieldDescription):
+            self.registerViewDescription.setText(
+                item.text()
+            )
