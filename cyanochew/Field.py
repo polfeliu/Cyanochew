@@ -118,7 +118,7 @@ class Field:
         self.registerViewTitle.setEditable(False)
 
     def toData(self):
-        field = {} #TODO
+        field = {}
         field['readWrite'] = self.readWrite.text()
         field['bitStart'] = int(self.bitStart.text())
         field['bitEnd'] = int(self.bitEnd.text())

@@ -353,17 +353,14 @@ class Window(QtWidgets.QMainWindow):
         self.registerLayoutView.CloseRequest.connect(self.registerLayoutViewClose)
         self.registerLayoutView.setWindowTitle(item.text())
 
+
         #Load Data
         for name, field in fields.items():
-            self.registerLayoutView.registerLayout.newField(
-                bitStart=field['bitStart'],
-                bitEnd=field['bitEnd'],
-                ReadWrite=field['readWrite'],
-                type=field['type'],
-                title=field['title'],
-                description=field['description'],
-                name=name
-            )
+            if isinstance(field, Field):
+                self.registerLayoutView.registerLayout.newField(
+                    name,
+                    field.toData()
+                )
 
         self.registerLayoutView.show()
 
