@@ -1,15 +1,99 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
+from typing import List
 
-#TODO When changing name, it should validate that it doesn't already exist
+# TODO When changing field name, it should validate that it doesn't already exist
 
-# This view handles Start and End the other way around respect to cyanobyte and the main window as this was created prior to the main window.
-# Cyanobyte: bitStart: 7, bitEnd: 3
-# RegisterLayout: Start: 3, End: 7
-# When loading and saving they are reversed. This should be changed some day or refactor start and end to other names.
+
+class SplitField:
+    row: int
+    start:int
+    end: int
+    StartHandle: bool
+    EndHandle: bool
+    RectHandle: QtCore.QRect
+    text: str
+
+class FieldLayoutItem():
+    name: str = None
+    bitEnd: int = None
+    bitStart: int = None
+    description: str = None
+    readWrite: str = None
+    register: str = None
+    title: str = None
+    type: str = None
+
+    overlapping: bool = False
+
+    def __init__(self,
+                 name: str,
+                 bitEnd: int,
+                 bitStart: int,
+                 description: str,
+                 readWrite: str,
+                 register: str,
+                 title: str,
+                 type: str
+                 ):
+        self.name = name
+        self.bitEnd = bitEnd
+        self.bitStart = bitStart
+        self.description = description
+        self.readWrite = readWrite
+        self.register = register
+        self.title = title
+        self.type = type
+
+    split: List[SplitField] = []
+
+    def calculateSplit(self, width: int):
+        columnend = self.bitEnd % width
+        rowend = self.bitEnd // width
+
+        columnstart = self.bitStart % width
+        rowstart = self.bitStart // width
+
+        self.split = []
+
+        splitbitend = 0
+        splitbitstart = 0
+
+        for row in range(rowend, rowstart+1):
+            sf = SplitField()
+            if row == rowend: #First row
+                sf.end = columnend
+                sf.EndHandle = True
+            else:
+                sf.end = 0
+                sf.EndHandle = False
+
+            if row == rowstart: #Last Row
+                sf.start = columnstart
+                sf.StartHandle = True
+            else:
+                sf.start = 7
+                sf.StartHandle = False
+
+            sf.row = row
+
+            width = sf.start - sf.end + 1
+            splitbitstart = splitbitend + width - 1
+
+            sf.text = "%s\r\n[%i:%i]" % (
+                self.name,
+                splitbitstart,
+                splitbitend
+            )
+
+            splitbitend = splitbitstart + 1
+
+            self.split.append(sf)
+
+    StartHandle: QtCore.QRect
+    EndHandle: QtCore.QRect
 
 class _RegisterLayout(QtWidgets.QWidget):
-
     SelectedSignal = QtCore.pyqtSignal(object)
     UpdatedData = QtCore.pyqtSignal()
     DoubleClickField = QtCore.pyqtSignal()
@@ -22,56 +106,45 @@ class _RegisterLayout(QtWidgets.QWidget):
             QtWidgets.QSizePolicy.MinimumExpanding
         )
 
-        self._padding = 4  # n-pixel gap around edge.
+    _padding: int = 4
 
-        # List of fields.
-        # 0: Name
-        # 1: start #Start is the minimum
-        # 2: end   #End is the maximum
-        # 3: ReadWrite
-        # 4: Type
-        # 5: Title
-        # 6: Description
-        self.fields = []
+    registerlength: int = 8
 
-        self.length = 8
+    selected = None#TODO
 
-        self.overlapping = {}
-        self.selected = None
+    bitwidth: int = 8
 
-        # Key of fields with list of splitfields with a list of:
-        # #Row, #ColumnStart, #ColumnEnd, #BitStart # BitEnd #StartHandle, #EndHandle, Overlapping
-        self.splitFields = {}
+    nrows: int = 0
 
-        self.rectFields = {}
-        self.rectStartHandles = {}
-        self.rectEndHandles = {}
+    fields: List[FieldLayoutItem] = []
 
-        self.bitwidth = 8
+    def newField(self, name: str, field: dict):
+        try:
+            f = FieldLayoutItem(
+                name=name,
+                bitEnd=field['bitEnd'],
+                bitStart=field['bitStart'],
+                description=field['description'],
+                readWrite=field['readWrite'],
+                register=field['register'],
+                title=field['title'],
+                type=field['type']
+            )
+            self.fields.append(f)
+            return True
+        except KeyError:
+            return False
 
-        self.nrows = 0
-
-    def newField(self, bitStart, bitEnd, ReadWrite='R', type='number', title="", description="", name="New Field"):
-        start = min(bitStart, bitEnd)
-        end = max(bitStart, bitEnd)
-        self.fields.append([
-            name,           #Name
-            start,          #bitStart
-            end,            #bitEnd
-            ReadWrite,      #ReadWrite
-            type,           #type
-            title,          #title
-            description     #description
-        ])
-
-    def calculateOverlapping(self):
+    # TODO
+    def calculateOverlapping2(self):
+        return False
         self.overlapping = {}
         for i, field in enumerate(self.fields):
             overlapped = False
             ran = range(field[1], field[2] + 1)
             name = field[0]
             for j, field2 in enumerate(self.fields):
-                if i == j: #Same element, ignore and continue searching
+                if i == j:  # Same element, ignore and continue searching
                     continue
 
                 # Find if start element or end element is inside the range
@@ -81,65 +154,28 @@ class _RegisterLayout(QtWidgets.QWidget):
 
             self.overlapping[i] = overlapped
 
+    # TODO
     def updateSplitFields(self):
-        self.calculateOverlapping()
-        self.splitFields = {}
+        for field in self.fields:
+            field.calculateSplit(
+                width=self.bitwidth
+            )
 
-        for i, field in enumerate(self.fields):
-            name = field[0]
-            columnstart = field[1] % self.bitwidth
-            rowstart = field[1] // self.bitwidth
+        # TODO self.calculateOverlapping()
+        return False
 
-            columnend = field[2] % self.bitwidth
-            rowend = field[2] // self.bitwidth
-
-            row = rowstart
-            self.splitFields[i] = []
-
-            bitstart = 0
-            bitend = 0
-
-            while row <= rowend:
-                #Not the first row: Expand Left to the start
-                if row != rowstart:
-                    start = 0
-                    LeftHandle = False
-                else:
-                    start = columnstart
-                    LeftHandle = True
-
-                #Not the last row: Expand Right to the end
-                if row != rowend:
-                    end = self.bitwidth - 1
-                    RightHandle = False
-                else:
-                    end = columnend
-                    RightHandle = True
-
-
-                width = end - start
-                bitend = bitstart + width
-
-                self.splitFields[i].append(
-                    [row,start, end, bitstart, bitend, LeftHandle, RightHandle]
-                )
-
-                bitstart = bitend + 1
-
-                row = row + 1
-                if not self.dragging:
-                    self.nrows = max(self.nrows, row)
-                    self.resize(
-                        self.size().width(),
-                        self._padding + self.nrows * self.height_bitbox +2
-                    )
-
+        if not self.dragging: #TODO Move to paint field
+            self.nrows = max(self.nrows, row)
+            self.resize(
+                self.size().width(),
+                self._padding + self.nrows * self.height_bitbox + 2
+            )
 
     HorizontalMSB = True
     VerticalMSB = True
 
 
-    #Translate rows and columns of fields according to the MSB settings
+    # Translate rows and columns of fields according to the MSB settings
     def translateField(self, row, column):
         if self.HorizontalMSB:
             column = self.bitwidth - column - 1
@@ -150,22 +186,27 @@ class _RegisterLayout(QtWidgets.QWidget):
         return row, column
 
     def postoXY(self, pos):
-        return pos%self.bitwidth,pos//self.bitwidth
+        return pos % self.bitwidth, pos // self.bitwidth
 
-    def updateBitWidth(self, bitwidth):
+    def updateBitWidth(self, bitwidth: int):
         self.bitwidth = bitwidth
-        self.nrows = max(
-            self.nrows,
-            ((self.length - 1) // self.bitwidth) + 1
-        )
         self.update()
 
+    def updateNRows(self):
+        maxrows = 1
+        for field in self.fields:
+            for split in field.split:
+                maxrows = max(maxrows, split.row + 1)
+        self.nrows = maxrows
 
     height_bitbox = 60
 
-    def paintEvent(self, e):
-        #For now we will update the split fields every time, this could be optimitzed
+    # TODO
+    def paintEvent(self, e: QtGui.QPaintEvent) -> None:
+
+        # For now we will update the split fields every time, this could be optimitzed
         self.updateSplitFields()
+        self.updateNRows()
 
         painter = QtGui.QPainter(self)
         brush = QtGui.QBrush()
@@ -180,12 +221,12 @@ class _RegisterLayout(QtWidgets.QWidget):
         d_height = painter.device().height() - (self._padding * 2)
         d_width = painter.device().width() - (self._padding * 2)
 
-        self.width_bitbox = d_width/self.bitwidth
+        self.width_bitbox = d_width / self.bitwidth
 
         # Grid
         brush.setColor(QtGui.QColor('gray'))
 
-        #Vertical
+        # Vertical
         for i in range(0, self.bitwidth + 1):
             rect = QtCore.QRect(
                 int(self._padding + i * self.width_bitbox - 1),  # X
@@ -195,75 +236,60 @@ class _RegisterLayout(QtWidgets.QWidget):
             )
             painter.fillRect(rect, brush)
 
-        self.rectFields = {}
+        for field in self.fields:
+            for split in field.split:
+                row, x1 = self.translateField(split.row, split.start)
+                _, x2 = self.translateField(row, split.end)
 
-        #Fields
-        for i, splitFields in self.splitFields.items():
-            name = self.fields[i][0]
-            self.rectFields[i] = []
-            for field in splitFields:
-
-                row = field[0]
-
-                columnstart = field[1]
-                columnend = field[2]
-                bitstart = field[3]
-                bitend = field[4]
-    
-                row, x1 = self.translateField(row, columnstart)
-                _, x2 = self.translateField(row, columnend)
-
-                start = min(x1, x2)
+                left = min(x1, x2)
                 width = abs(x1-x2) + 1
 
-                if self.overlapping[i]: #Overlapping
-                    brush.setColor(QtGui.QColor(0xEF, 0x83, 0x54 ,128))
+                if field.overlapping:
+                    brush.setColor(QtGui.QColor(0xEF, 0x83, 0x54, 128))
                 else:
                     brush.setColor(QtGui.QColor(0xEF, 0x83, 0x54, 255))
 
-                rect = QtCore.QRect(
-                           int(self._padding + start * self.width_bitbox + 2), #X
-                           int(self._padding + row * self.height_bitbox +2),   #Y
-                           int(width*self.width_bitbox - 4),                   #W
-                           int(self.height_bitbox - 4)                         #H
-                       )
+                split.RectHandle = QtCore.QRect(
+                    int(self._padding + left * self.width_bitbox + 2),  # X
+                    int(self._padding + row * self.height_bitbox + 2),  # Y
+                    int(width * self.width_bitbox - 4),  # W
+                    int(self.height_bitbox - 4)  # H
+                )
 
-                self.rectFields[i].append(rect)
+                painter.fillRect(split.RectHandle, brush)
 
-                painter.fillRect(rect, brush)
-
-                #Handles
-                if self.selected == i:
-                    brush.setColor(QtGui.QColor(0,0,0))
+                # Handles
+                if False: #TODO Selected condition
+                    brush.setColor(QtGui.QColor(0, 0, 0))
                 else:
-                    brush.setColor(QtGui.QColor(70,70,70))
+                    brush.setColor(QtGui.QColor(70, 70, 70))
 
                 if self.HorizontalMSB:
-                    leftHandle = field[6]
-                    rightHandle = field[5]
+                    leftHandle = split.StartHandle
+                    rightHandle = split.EndHandle
                 else:
-                    leftHandle = field[5]
-                    rightHandle = field[6]
+                    leftHandle = split.EndHandle
+                    rightHandle = split.StartHandle
 
                 if leftHandle:
-                    #Draw Left Handle
+                    # Draw Left Handle
                     handlerect = QtCore.QRect(
-                        int(self._padding + start*self.width_bitbox + 5),
+                        int(self._padding + left * self.width_bitbox + 5),
                         int(self._padding + row * self.height_bitbox + 17),
                         int(7),
                         int(self.height_bitbox - 22)
                     )
                     painter.fillRect(handlerect, brush)
                     if not self.HorizontalMSB:
-                        self.rectStartHandles[i] = handlerect
+                        field.EndHandle = handlerect
                     else:
-                        self.rectEndHandles[i] = handlerect
+                        field.StartHandle = handlerect
 
                 if rightHandle:
 
-                    #Draw Right Handle
+                    # Draw Right Handle
                     handlerect = QtCore.QRect(
-                        int(self._padding + (start + width) * self.width_bitbox - 12),
+                        int(self._padding + (left + width) * self.width_bitbox - 12),
                         int(self._padding + row * self.height_bitbox + 17),
                         int(7),
                         int(self.height_bitbox - 22)
@@ -271,28 +297,27 @@ class _RegisterLayout(QtWidgets.QWidget):
                     painter.fillRect(handlerect, brush)
 
                     if self.HorizontalMSB:
-                        self.rectStartHandles[i] = handlerect
+                        field.StartHandle = handlerect
                     else:
-                        self.rectEndHandles[i] = handlerect
-
+                        field.EndHandle = handlerect
 
                 font = painter.font()
-                if self.selected == i:
+                if False: #TODO Selected condition
                     font.setBold(True)
                     painter.setFont(font)
 
                 painter.drawText(
-                    rect, Qt.AlignCenter,
-                    "%s\r\n[%i:%i]" % (name, bitend, bitstart)
+                    split.RectHandle, Qt.AlignCenter,
+                    split.text,
                 )
 
                 font.setBold(False)
                 painter.setFont(font)
 
-        #Numbers
-        for pos in range(0,self.bitwidth*self.nrows):
+        # Numbers
+        for pos in range(0, self.bitwidth * self.nrows):
 
-            if pos >= self.length:
+            if pos >= self.registerlength:
                 painter.setPen(Qt.red);
             else:
                 painter.setPen(Qt.black);
@@ -300,19 +325,18 @@ class _RegisterLayout(QtWidgets.QWidget):
             column, row = self.postoXY(pos)
             row, column = self.translateField(row, column)
             painter.drawText(
-                int(column * self.width_bitbox+9),
+                int(column * self.width_bitbox + 9),
                 int(row * self.height_bitbox + 17),
                 str(pos)
             )
 
         painter.end()
 
-
-    def PosToField(self, x,y):
+    def PosToField(self, x, y):
         column = min((x - 2 - self._padding) // self.width_bitbox, self.bitwidth - 1)
         row = min((y - 2 - self._padding) // self.height_bitbox, self.nrows - 1)
 
-        column = max(0, min(column, self.bitwidth-1))
+        column = max(0, min(column, self.bitwidth - 1))
         row = max(0, min(row, self.nrows - 1))
 
         row, column = self.translateField(row, column)
@@ -325,40 +349,47 @@ class _RegisterLayout(QtWidgets.QWidget):
     def _trigger_refresh(self):
         self.update()
 
-    def mouseMoveEvent(self, e):
+    # TODO
+    def mouseMoveEvent2(self, e):
+        return False
         if self.dragging is not None:
             row, column = self.PosToField(e.x(), e.y())
 
-            displacement = int((column - self.draggingOriginColumn) + (row - self.draggingOriginRow)*self.bitwidth)
+            displacement = int((column - self.draggingOriginColumn) + (row - self.draggingOriginRow) * self.bitwidth)
 
             start = self.fields[self.dragging][1]
             end = self.fields[self.dragging][2]
 
             if self.dragMove or self.dragStartHandle:
                 start = self.draggingOriginal[1] + displacement
-                start = max(0,start)
+                start = max(0, start)
 
             if self.dragMove or self.dragEndHandle:
                 end = self.draggingOriginal[2] + displacement
-                end = max(0,end)
+                end = max(0, end)
 
-            self.changeFieldData(start,end)
+            self.changeFieldData(start, end)
             self.UpdatedData.emit()
 
         self.update()
 
-    def changeFieldData(self,start,end):
+    # TODO
+    def changeFieldData2(self, start, end):
+        return False
         if self.selected is not None:
             self.fields[self.selected][1] = min(start, end)
             self.fields[self.selected][2] = max(start, end)
 
-    def mouseReleaseEvent(self, e):
+    # TODO
+    def mouseReleaseEvent2(self, e):
+        return False
         self.dragging = None
         self.dragMove = False
         self.dragStartHandle = False
         self.dragEndHandle = False
         self.update()
 
+    # TODO
     dragging = None
     draggingOriginRow = None
     draggingOriginColumn = None
@@ -367,9 +398,11 @@ class _RegisterLayout(QtWidgets.QWidget):
     dragEndHandle = False
     draggingOriginal = None
 
-    def mousePressEvent(self, e):
+    # TODO
+    def mousePressEvent2(self, e):
+        return False
         pos = e.pos()
-        self.draggingOriginRow,self.draggingOriginColumn = self.PosToField(pos.x(), pos.y())
+        self.draggingOriginRow, self.draggingOriginColumn = self.PosToField(pos.x(), pos.y())
 
         found = False
         for i, rects in self.rectFields.items():
@@ -384,10 +417,10 @@ class _RegisterLayout(QtWidgets.QWidget):
                     break
 
         if not found:
-            self.selected=None
+            self.selected = None
 
         if found:
-            #Seach for start and end handle
+            # Seach for start and end handle
             found = False
             for i, rect in self.rectStartHandles.items():
                 if rect.contains(pos):
@@ -415,7 +448,9 @@ class _RegisterLayout(QtWidgets.QWidget):
         self.SelectedSignal.emit(self.selected)
         self.update()
 
-    def mouseDoubleClickEvent(self, e):
+    # TODO
+    def mouseDoubleClickEvent2(self, e):
+        return False
         if self.selected is not None:
             self.DoubleClickField.emit()
         else:
@@ -426,7 +461,9 @@ class _RegisterLayout(QtWidgets.QWidget):
             self.SelectedSignal.emit(self.selected)
             self.update()
 
+    # TODO
     def setSelected(self, index):
+        return False
         self.selected = index
         self.update()
 
@@ -439,8 +476,8 @@ class RegisterLayoutView(QtWidgets.QWidget):
         layout = QtWidgets.QHBoxLayout()
 
         self.registerLayout = _RegisterLayout()
-        self.registerLayout.SelectedSignal.connect(self.updateSelected);
-        self.registerLayout.UpdatedData.connect(self.updatedData)
+#        self.registerLayout.SelectedSignal.connect(self.updateSelected);
+#        self.registerLayout.UpdatedData.connect(self.updatedData)
 
         self.scroll = QtWidgets.QScrollArea()
 
@@ -488,14 +525,14 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.bitwidthSpin.setMinimumHeight(30)
         self.bitwidthSpin.setMinimum(1)
         self.bitwidthSpin.setValue(8)
-        self.bitwidthSpin.valueChanged.connect(self.updateBitWidth)
+#        self.bitwidthSpin.valueChanged.connect(self.updateBitWidth)
         bitwidthLayout.addWidget(self.bitwidthSpin)
         viewSettings.addWidget(bitwidthGroup)
-        self.updateBitWidth()
+#        self.updateBitWidth()
 
         leftLayout.addLayout(viewSettings)
 
-        layout.addLayout(leftLayout,1) # stretch 1 so it expands
+        layout.addLayout(leftLayout, 1)  # stretch 1 so it expands
 
         self.sideBar = QtWidgets.QVBoxLayout()
 
@@ -508,19 +545,19 @@ class RegisterLayoutView(QtWidgets.QWidget):
         font = QtGui.QFont()
         font.setPointSize(11)
         self.selectedName.setFont(font)
-        self.selectedName.textChanged.connect(self.updateName)
+#        self.selectedName.textChanged.connect(self.updateName)
         self.sideBar.addWidget(self.selectedName)
 
-        self.registerLayout.DoubleClickField.connect(self.focusName)
+#        self.registerLayout.DoubleClickField.connect(self.focusName)
 
         startLabel = QtWidgets.QLabel("Start")
-        startLabel.setContentsMargins(0,10,0,0)
+        startLabel.setContentsMargins(0, 10, 0, 0)
         self.sideBar.addWidget(startLabel)
         self.spinStart = QtWidgets.QSpinBox()
         self.spinStart.setEnabled(False)
         self.spinStart.setMinimumSize(QtCore.QSize(0, 40))
         self.spinStart.setMaximum(1000)
-        self.spinStart.valueChanged.connect(self.updateStartData)
+#        self.spinStart.valueChanged.connect(self.updateStartData)
         self.sideBar.addWidget(self.spinStart)
 
         endLabel = QtWidgets.QLabel("End")
@@ -530,7 +567,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.spinEnd.setEnabled(False)
         self.spinEnd.setMinimumSize(QtCore.QSize(0, 40))
         self.spinEnd.setMaximum(1000)
-        self.spinEnd.valueChanged.connect(self.updateEndData)
+#        self.spinEnd.valueChanged.connect(self.updateEndData)
         self.sideBar.addWidget(self.spinEnd)
 
         widthLabel = QtWidgets.QLabel("Width")
@@ -540,9 +577,8 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.spinWidth.setEnabled(False)
         self.spinWidth.setMinimumSize(QtCore.QSize(0, 40))
         self.spinWidth.setMaximum(1000)
-        self.spinWidth.valueChanged.connect(self.updateWidthData)
+#        self.spinWidth.valueChanged.connect(self.updateWidthData)
         self.sideBar.addWidget(self.spinWidth)
-
 
         spacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.sideBar.addSpacerItem(spacer)
@@ -550,27 +586,29 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.fieldlistView = QtWidgets.QListWidget()
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
         self.fieldlistView.setSizePolicy(sizePolicy)
-        self.fieldlistView.itemSelectionChanged.connect(self.changedSelected)
-        self.fieldlistView.itemDoubleClicked.connect(self.focusName)
+#        self.fieldlistView.itemSelectionChanged.connect(self.changedSelected)
+#        self.fieldlistView.itemDoubleClicked.connect(self.focusName)
         self.sideBar.addWidget(self.fieldlistView)
-
 
         layout.addLayout(self.sideBar)
 
         self.setLayout(layout)
 
-        self.updateList()
+#        self.updateList()
+
 
     SaveRequest = QtCore.pyqtSignal()
     CloseRequest = QtCore.pyqtSignal()
 
+    '''
     def closeEvent(self, event):
         msg = QtWidgets.QMessageBox()
         msg.setIcon(QtWidgets.QMessageBox.Information)
 
         msg.setText("Do you want to save?")
         msg.setWindowTitle("Save")
-        msg.setStandardButtons(QtWidgets.QMessageBox.Save | QtWidgets.QMessageBox.Cancel | QtWidgets.QMessageBox.Discard)
+        msg.setStandardButtons(
+            QtWidgets.QMessageBox.Save | QtWidgets.QMessageBox.Cancel | QtWidgets.QMessageBox.Discard)
 
         retval = msg.exec_()
 
@@ -584,7 +622,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
         elif retval == QtWidgets.QMessageBox.Cancel:
             event.ignore()
 
-
+    # TODO
     def deleteSelectedField(self):
         self.registerLayout.fields.pop(
             self.registerLayout.selected
@@ -598,12 +636,15 @@ class RegisterLayoutView(QtWidgets.QWidget):
         if e.key() == QtCore.Qt.Key_Delete:
             self.deleteSelectedField()
 
+    # TODO
     def focusName(self):
+        return False
         self.selectedName.setFocus()
         self.selectedName.selectAll()
 
-
+    # TODO
     def updateName(self):
+        return False
         if self.registerLayout.selected is not None:
             self.registerLayout.fields[
                 self.registerLayout.selected
@@ -613,7 +654,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
 
     def updateBitWidth(self):
         self.registerLayout.updateBitWidth(self.bitwidthSpin.value())
-
+'''
     def updateByteOrder(self):
         if self.RadioVerticalMSB.isChecked():
             self.registerLayout.VerticalMSB = True
@@ -626,8 +667,10 @@ class RegisterLayoutView(QtWidgets.QWidget):
             self.registerLayout.HorizontalMSB = False
 
         self.registerLayout.update()
-
+    '''
+    # TODO
     def updateSelected(self, i):
+        return False
         if i is not None:
             self.fieldlistView.setCurrentRow(i)
             self.spinStart.setEnabled(True)
@@ -642,15 +685,19 @@ class RegisterLayoutView(QtWidgets.QWidget):
             self.spinWidth.setEnabled(False)
             self.selectedName.setText("Select Field")
 
+    # TODO
     def updatedData(self):
+        return False
         if self.registerLayout.selected is not None:
             start = self.registerLayout.fields[self.registerLayout.selected][1]
             end = self.registerLayout.fields[self.registerLayout.selected][2]
             self.spinStart.setValue(start)
             self.spinEnd.setValue(end)
-            self.spinWidth.setValue(end-start+1)
+            self.spinWidth.setValue(end - start + 1)
 
+    # TODO
     def updateStartData(self):
+        return False
         if self.registerLayout.selected is not None:
             self.registerLayout.changeFieldData(
                 self.spinStart.value(),
@@ -659,7 +706,9 @@ class RegisterLayoutView(QtWidgets.QWidget):
             self.updatedData()
             self.registerLayout.update()
 
+    # TODO
     def updateEndData(self):
+        return False
         if self.registerLayout.selected is not None:
             self.registerLayout.changeFieldData(
                 self.registerLayout.fields[self.registerLayout.selected][1],
@@ -668,20 +717,26 @@ class RegisterLayoutView(QtWidgets.QWidget):
             self.updatedData()
             self.registerLayout.update()
 
+    # TODO
     def updateWidthData(self):
+        return False
         if self.registerLayout.selected is not None:
             self.spinEnd.setValue(
                 self.spinStart.value() + self.spinWidth.value() - 1
             )
 
+    # TODO
     def updateList(self):
+        return False
         self.fieldlistView.model().removeRows(0, self.fieldlistView.model().rowCount())
         for field in self.registerLayout.fields:
             self.fieldlistView.addItem(field[0])
 
         self.updateSelected(self.registerLayout.selected)
 
+    # TODO
     def changedSelected(self):
+        return False
         if len(self.fieldlistView.selectedIndexes()):
             i = self.fieldlistView.selectedIndexes()[0].row()
             self.registerLayout.setSelected(i)
@@ -698,11 +753,37 @@ class RegisterLayoutView(QtWidgets.QWidget):
             return self[name]
 
         return getattr(self._dial, name)
+'''
 
 if __name__ == "__main__":
     from PyQt5 import QtWidgets
 
     app = QtWidgets.QApplication([])
-    volume = RegisterLayoutView()
-    volume.show()
+    exampleView = RegisterLayoutView()
+    exampleView.registerLayout.newField(
+        "exampleField",
+        {
+            'bitEnd': 4,
+            'bitStart': 15,
+            'description': "some bits",
+            'readWrite': "R/W",
+            'register': "registerA",
+            'title': "some Fancy Title",
+            'type': "number"
+        }
+    )
+
+    exampleView.registerLayout.newField(
+        "asdf",
+        {
+            'bitEnd': 17,
+            'bitStart': 18,
+            'description': "some bits",
+            'readWrite': "R/W",
+            'register': "registerA",
+            'title': "some Fancy Title",
+            'type': "number"
+        }
+    )
+    exampleView.show()
     app.exec_()
