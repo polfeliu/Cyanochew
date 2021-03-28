@@ -2,6 +2,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 from typing import List, Tuple, Union
 from itertools import product
+from PyQt5.Qt import QStandardItemModel, QStandardItem
 
 # TODO When changing field name, it should validate that it doesn't already exist
 
@@ -27,6 +28,8 @@ class FieldLayoutItem():
 
     overlapped: bool = False
 
+    listItem: QStandardItem = None
+
     def __init__(self,
                  name: str,
                  bitEnd: int,
@@ -38,8 +41,8 @@ class FieldLayoutItem():
                  type: str
                  ):
         self.name = name
-        self.bitEnd = bitEnd
-        self.bitStart = bitStart
+        self.bitEnd = int(bitEnd)
+        self.bitStart = int(bitStart)
         self.description = description
         self.readWrite = readWrite
         self.register = register
@@ -95,7 +98,7 @@ class FieldLayoutItem():
     EndHandleRect: QtCore.QRect = None
 
 class _RegisterLayout(QtWidgets.QWidget):
-    SelectedSignal = QtCore.pyqtSignal(object)
+    SelectedField = QtCore.pyqtSignal(object)
     UpdatedData = QtCore.pyqtSignal()
     DoubleClickField = QtCore.pyqtSignal()
 
@@ -132,6 +135,7 @@ class _RegisterLayout(QtWidgets.QWidget):
                 type=field['type']
             )
             self.fields.append(f)
+            self.UpdatedData.emit()
             return True
         except KeyError:
             return False
@@ -183,11 +187,6 @@ class _RegisterLayout(QtWidgets.QWidget):
 
         return row, column
 
-
-    def updateBitWidth(self, bitwidth: int):
-        self.bitwidth = bitwidth
-        self.update()
-
     def updateNRows(self):
         maxrows = 1
         for field in self.fields:
@@ -197,7 +196,8 @@ class _RegisterLayout(QtWidgets.QWidget):
         if not self.dragging: #While dragging dont update number of rows
             self.nrows = maxrows
 
-    height_bitbox = 60
+    height_bitbox: int = 60
+    width_bitbox: int = 60
 
     def paintEvent(self, e: QtGui.QPaintEvent) -> None:
 
@@ -358,14 +358,13 @@ class _RegisterLayout(QtWidgets.QWidget):
             self.changeSelectedFieldData(start, end)
             self.UpdatedData.emit()
 
-            self.update()
-
     def changeSelectedFieldData(self, start: int = None, end: int = None):
         if self.selected is not None:
             if start is not None:
                 self.selected.bitStart = start
             if end is not None:
                 self.selected.bitEnd = end
+        self.update()
 
     def mouseReleaseEvent(self, e):
         self.dragging = None
@@ -396,7 +395,7 @@ class _RegisterLayout(QtWidgets.QWidget):
 
         for field in self.fields:
             for split in field.split:
-                if split.RectHandle.contains(pos):
+                if split.RectHandle.contains(pos): #TODO Make Start and End handles have priority over overlapped rects
 
                     self.setSelected(field)
                     self.dragging = field
@@ -420,10 +419,8 @@ class _RegisterLayout(QtWidgets.QWidget):
         if not found:
             self.setSelected(None)
 
-        self.SelectedSignal.emit(self.selected)
         self.update()
 
-    # TODO
     def mouseDoubleClickEvent(self, e):
         if self.selected is not None:
             self.DoubleClickField.emit()
@@ -440,12 +437,11 @@ class _RegisterLayout(QtWidgets.QWidget):
                 'type': ""
             })
             if isinstance(f, FieldLayoutItem):
-                self.selected = f
-                self.SelectedSignal.emit(self.selected)
-                self.update()
+                self.setSelected(f)
 
     def setSelected(self, field: FieldLayoutItem = None):
         self.selected = field
+        self.SelectedField.emit(self.selected)
         self.update()
 
 
@@ -457,7 +453,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
         layout = QtWidgets.QHBoxLayout()
 
         self.registerLayout = _RegisterLayout()
-        self.registerLayout.SelectedSignal.connect(self.updateSelected);
+        self.registerLayout.SelectedField.connect(self.updateSelected);
         self.registerLayout.UpdatedData.connect(self.updatedData)
 
         self.scroll = QtWidgets.QScrollArea()
@@ -506,10 +502,10 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.bitwidthSpin.setMinimumHeight(30)
         self.bitwidthSpin.setMinimum(1)
         self.bitwidthSpin.setValue(8)
-#        self.bitwidthSpin.valueChanged.connect(self.updateBitWidth)
+        self.bitwidthSpin.valueChanged.connect(self.updateBitWidth)
         bitwidthLayout.addWidget(self.bitwidthSpin)
         viewSettings.addWidget(bitwidthGroup)
-#        self.updateBitWidth()
+        self.updateBitWidth()
 
         leftLayout.addLayout(viewSettings)
 
@@ -526,10 +522,10 @@ class RegisterLayoutView(QtWidgets.QWidget):
         font = QtGui.QFont()
         font.setPointSize(11)
         self.selectedName.setFont(font)
-#        self.selectedName.textChanged.connect(self.updateName)
+        self.selectedName.textChanged.connect(self.updateName)
         self.sideBar.addWidget(self.selectedName)
 
-#        self.registerLayout.DoubleClickField.connect(self.focusName)
+        self.registerLayout.DoubleClickField.connect(self.focusName)
 
         startLabel = QtWidgets.QLabel("Start")
         startLabel.setContentsMargins(0, 10, 0, 0)
@@ -538,7 +534,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.spinStart.setEnabled(False)
         self.spinStart.setMinimumSize(QtCore.QSize(0, 40))
         self.spinStart.setMaximum(1000)
-#        self.spinStart.valueChanged.connect(self.updateStartData)
+        self.spinStart.valueChanged.connect(self.updateStart)
         self.sideBar.addWidget(self.spinStart)
 
         endLabel = QtWidgets.QLabel("End")
@@ -548,7 +544,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.spinEnd.setEnabled(False)
         self.spinEnd.setMinimumSize(QtCore.QSize(0, 40))
         self.spinEnd.setMaximum(1000)
-#        self.spinEnd.valueChanged.connect(self.updateEndData)
+        self.spinEnd.valueChanged.connect(self.updateEnd)
         self.sideBar.addWidget(self.spinEnd)
 
         widthLabel = QtWidgets.QLabel("Width")
@@ -558,24 +554,28 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.spinWidth.setEnabled(False)
         self.spinWidth.setMinimumSize(QtCore.QSize(0, 40))
         self.spinWidth.setMaximum(1000)
-#        self.spinWidth.valueChanged.connect(self.updateWidthData)
+        self.spinWidth.valueChanged.connect(self.updateSpinWidth)
         self.sideBar.addWidget(self.spinWidth)
 
         spacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.sideBar.addSpacerItem(spacer)
 
-        self.fieldlistView = QtWidgets.QListWidget()
+        self.fieldlistModel = QStandardItemModel()
+
+        self.fieldlistView = QtWidgets.QListView()
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
         self.fieldlistView.setSizePolicy(sizePolicy)
-#        self.fieldlistView.itemSelectionChanged.connect(self.changedSelected)
-#        self.fieldlistView.itemDoubleClicked.connect(self.focusName)
+        self.fieldlistView.setModel(self.fieldlistModel)
+
+        self.fieldlistView.selectionModel().selectionChanged.connect(self.changedSelected)
+
         self.sideBar.addWidget(self.fieldlistView)
 
         layout.addLayout(self.sideBar)
 
         self.setLayout(layout)
 
-#        self.updateList()
+        self.updateList()
 
 
     SaveRequest = QtCore.pyqtSignal()
@@ -603,12 +603,13 @@ class RegisterLayoutView(QtWidgets.QWidget):
         elif retval == QtWidgets.QMessageBox.Cancel:
             event.ignore()
 
-    # TODO
+
+    #TODO Maybe move to widget
     def deleteSelectedField(self):
-        return
-        self.registerLayout.fields.pop(
+        self.registerLayout.fields.remove(
             self.registerLayout.selected
         )
+
         self.registerLayout.selected = None
         self.fieldlistView.clearSelection()
         self.registerLayout.update()
@@ -618,9 +619,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
         if e.key() == QtCore.Qt.Key_Delete:
             self.deleteSelectedField()
 
-    # TODO
     def focusName(self):
-        return False
         self.selectedName.setFocus()
         self.selectedName.selectAll()
 
@@ -635,7 +634,8 @@ class RegisterLayoutView(QtWidgets.QWidget):
             self.updateList()
 
     def updateBitWidth(self):
-        self.registerLayout.updateBitWidth(self.bitwidthSpin.value())
+        self.registerLayout.bitwidth = self.bitwidthSpin.value()
+        self.registerLayout.update()
 
     def updateByteOrder(self):
         if self.RadioVerticalMSB.isChecked():
@@ -650,79 +650,93 @@ class RegisterLayoutView(QtWidgets.QWidget):
 
         self.registerLayout.update()
 
-    # TODO
-    def updateSelected(self, i):
-        return False
-        if i is not None:
-            self.fieldlistView.setCurrentRow(i)
+    def updateSelected(self, field: FieldLayoutItem):
+
+        if isinstance(field, FieldLayoutItem):
+            i = field.listItem.index()
+            self.fieldlistView.selectionModel().select(i,QtCore.QItemSelectionModel.ClearAndSelect)
             self.spinStart.setEnabled(True)
             self.spinEnd.setEnabled(True)
             self.spinWidth.setEnabled(True)
-            self.selectedName.setText(self.registerLayout.fields[i][0])
-            self.updatedData()
+            self.selectedName.setReadOnly(False)
         else:
-            self.fieldlistView.clearSelection()
+            self.fieldlistView.selectionModel().clearSelection()
             self.spinStart.setEnabled(False)
             self.spinEnd.setEnabled(False)
             self.spinWidth.setEnabled(False)
-            self.selectedName.setText("Select Field")
+            self.selectedName.setReadOnly(True)
 
-    # TODO
-    def updatedData(self):
-        return False
+        self.updateSelectedData()
+
+
+    def updateSelectedData(self):
         if self.registerLayout.selected is not None:
-            start = self.registerLayout.fields[self.registerLayout.selected][1]
-            end = self.registerLayout.fields[self.registerLayout.selected][2]
+            start = self.registerLayout.selected.bitStart
+            end = self.registerLayout.selected.bitEnd
             self.spinStart.setValue(start)
             self.spinEnd.setValue(end)
-            self.spinWidth.setValue(end - start + 1)
+            self.spinWidth.setValue(start-end + 1)
+            self.selectedName.setText(self.registerLayout.selected.name)
+        else:
+            self.selectedName.setText("Select Field")
 
-    # TODO
-    def updateStartData(self):
-        return False
-        if self.registerLayout.selected is not None:
-            self.registerLayout.changeFieldData(
-                self.spinStart.value(),
-                self.registerLayout.fields[self.registerLayout.selected][2]
-            )
-            self.updatedData()
-            self.registerLayout.update()
 
-    # TODO
-    def updateEndData(self):
-        return False
-        if self.registerLayout.selected is not None:
-            self.registerLayout.changeFieldData(
-                self.registerLayout.fields[self.registerLayout.selected][1],
-                self.spinEnd.value()
-            )
-            self.updatedData()
-            self.registerLayout.update()
+    def updatedData(self):
+        self.updateList()
+        self.updateSelectedData()
 
-    # TODO
-    def updateWidthData(self):
-        return False
-        if self.registerLayout.selected is not None:
-            self.spinEnd.setValue(
-                self.spinStart.value() + self.spinWidth.value() - 1
-            )
+    def updateStart(self):
+        if not self.registerLayout.dragging and self.spinStart.hasFocus():
+            end = self.spinEnd.value()
+            start = self.spinStart.value()
 
-    # TODO
+            if start >= end:
+                self.registerLayout.changeSelectedFieldData(start = start)
+                self.updateSelectedData() # To trigger recalculation of width
+            else:
+                self.spinStart.setValue(end)
+
+    def updateEnd(self):
+        if not self.registerLayout.dragging and self.spinEnd.hasFocus():
+            end = self.spinEnd.value()
+            start = self.spinStart.value()
+
+            if start >= end:
+                self.registerLayout.changeSelectedFieldData(end=end)
+                self.updateSelectedData() # To trigger recalculation of width
+            else:
+                self.spinEnd.setValue(start)
+
+    def updateSpinWidth(self):
+        if not self.registerLayout.dragging and self.spinWidth.hasFocus():
+            if self.spinWidth.value() > 0:
+                self.registerLayout.changeSelectedFieldData(
+                    end=self.spinStart.value() - self.spinWidth.value() + 1
+                )
+                self.updateSelectedData() # To update end
+            else:
+                self.spinWidth.setValue(1)
+
     def updateList(self):
-        return False
-        self.fieldlistView.model().removeRows(0, self.fieldlistView.model().rowCount())
+        self.fieldlistModel.clear()
         for field in self.registerLayout.fields:
-            self.fieldlistView.addItem(field[0])
+            field.listItem = QStandardItem(field.name)
+            field.listItem.setEditable(False)
+            self.fieldlistModel.appendRow(field.listItem)
 
-        self.updateSelected(self.registerLayout.selected)
+        if self.registerLayout.selected is not None:
+            self.updateSelected(self.registerLayout.selected)
 
-    # TODO
-    def changedSelected(self):
-        return False
-        if len(self.fieldlistView.selectedIndexes()):
-            i = self.fieldlistView.selectedIndexes()[0].row()
-            self.registerLayout.setSelected(i)
-            self.updateSelected(i)
+
+    def changedSelected(self, selected: QtCore.QItemSelection):
+        if isinstance(selected, QtCore.QItemSelection):
+            if len(selected.indexes()):
+                i = selected.indexes()[0].row()
+                item = self.fieldlistModel.item(i)
+
+                for field in self.registerLayout.fields:
+                    if field.listItem == item:
+                        self.registerLayout.setSelected(field)
 
     def resizeEvent(self, e):
         self.registerLayout.resize(
