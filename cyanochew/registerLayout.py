@@ -195,6 +195,10 @@ class _RegisterLayout(QtWidgets.QWidget):
 
         if not self.dragging: #While dragging dont update number of rows
             self.nrows = maxrows
+            self.resize(
+                self.size().width(),
+                self._padding + self.nrows * self.height_bitbox + 2
+            )
 
     height_bitbox: int = 60
     width_bitbox: int = 60
@@ -347,13 +351,15 @@ class _RegisterLayout(QtWidgets.QWidget):
             if self.dragMove or self.dragStartHandle:
                 start = self.draggingOriginBitStart + displacement
                 start = max(0, start)
+                if end>start:
+                    start = end
 
             if self.dragMove or self.dragEndHandle:
                 end = self.draggingOriginBitEnd + displacement
                 end = max(0, end)
+                if end>start:
+                    end = start
 
-            if end > start:
-                start, end = end, start #Swap
 
             self.changeSelectedFieldData(start, end)
             self.UpdatedData.emit()
