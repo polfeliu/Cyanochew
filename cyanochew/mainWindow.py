@@ -299,24 +299,26 @@ class Window(QtWidgets.QMainWindow):
 
     registerLayoutView = None
 
-    def registerLayoutViewSave(self): #TODO
+    def registerLayoutViewSave(self):
         #delete fields of register
         for name, field in self.getFieldsOfRegister(self.editingRegister).items():
             self.deleteField(name)
 
         #create updated fields
-        for fieldarray in self.registerLayoutView.registerLayout.fields:
-            field = {
-                'readWrite': fieldarray[3],
-                'bitStart': max(fieldarray[1],fieldarray[2]),
-                'bitEnd': min(fieldarray[1],fieldarray[2]),
-                'type': fieldarray[4],
-                'title': fieldarray[5],
-                'description': fieldarray[6],
+        for field in self.registerLayoutView.registerLayout.fields:
+            data = {
+                'readWrite': field.readWrite,
+                'bitStart': field.bitStart,
+                'bitEnd': field.bitEnd,
+                'type': field.type,
+                'title': field.title,
+                'description': field.description,
                 'register': "#/registers/" + self.editingRegister
             }
 
-            self.addField(fieldarray[0], field)
+            self.addField(field.name, data)
+
+            print(field.name)
 
     def registerLayoutViewClose(self):
         self.registerLayoutView.close()
@@ -324,9 +326,9 @@ class Window(QtWidgets.QMainWindow):
         self.registerLayoutView = None
         self.editingRegister = False
 
-    editingRegister = None
+    editingRegister: str = None
 
-    def editRegisterSelected(self):#TODO
+    def editRegisterSelected(self):
         index = self.RegisterTree.currentIndex()
 
         if index.parent().isValid(): #if it has parent it is a field, not a register
@@ -338,7 +340,6 @@ class Window(QtWidgets.QMainWindow):
         if not isinstance(item, RegisterItem):
             return False
 
-
         self.editingRegister = item.text()
 
         key = "#/registers/" + item.text()
@@ -347,6 +348,7 @@ class Window(QtWidgets.QMainWindow):
         if self.registerLayoutView is not None:
             self.registerLayoutViewClose()
 
+        self.registerLayoutView = None
         self.registerLayoutView = RegisterLayoutView()
 
         self.registerLayoutView.SaveRequest.connect(self.registerLayoutViewSave)

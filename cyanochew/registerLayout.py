@@ -110,6 +110,8 @@ class _RegisterLayout(QtWidgets.QWidget):
             QtWidgets.QSizePolicy.MinimumExpanding
         )
 
+        self.fields = []
+
     _padding: int = 4
 
     registerlength: int = 8
@@ -528,6 +530,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
         font = QtGui.QFont()
         font.setPointSize(11)
         self.selectedName.setFont(font)
+        self.selectedName.setReadOnly(True)
         self.selectedName.textChanged.connect(self.updateName)
         self.sideBar.addWidget(self.selectedName)
 
@@ -629,13 +632,9 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.selectedName.setFocus()
         self.selectedName.selectAll()
 
-    # TODO
     def updateName(self):
-        return False
         if self.registerLayout.selected is not None:
-            self.registerLayout.fields[
-                self.registerLayout.selected
-            ][0] = self.selectedName.text()
+            self.registerLayout.selected.name = self.selectedName.text()
             self.registerLayout.update()
             self.updateList()
 
