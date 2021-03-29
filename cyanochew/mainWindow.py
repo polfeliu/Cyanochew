@@ -480,6 +480,8 @@ class Window(QtWidgets.QMainWindow):
                 pass
             elif isinstance(obj, QtWidgets.QSpinBox):
                 return self.objectHandles[address].value()
+            elif isinstance(obj, QtWidgets.QDoubleSpinBox):
+                return self.objectHandles[address].value()
             elif isinstance(obj, Register):
                 return self.getRegister(address.split("/")[-1]).toData()
             elif isinstance(obj, Field):
