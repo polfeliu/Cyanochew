@@ -67,7 +67,12 @@ class Window(QtWidgets.QMainWindow):
         self.loadPropertiesFromSchema()
 
         self.actionOpen = self.findChild(QtWidgets.QAction, "actionOpen")
-        self.actionOpen.triggered.connect(self.openFile)
+        self.actionOpen.triggered.connect(
+            lambda: self.openFile(
+                QtWidgets.QFileDialog.getOpenFileName(self, 'Open File')[0]
+            )
+        )
+
         self.actionSave = self.findChild(QtWidgets.QAction, "actionSave")
         self.actionSave.triggered.connect(
             lambda: self.saveFile(
@@ -91,8 +96,8 @@ class Window(QtWidgets.QMainWindow):
 
         self.show()
 
-        self.openFile('../test/peripherals/example.yaml')#Temporary, normally will be made from open command
-        self.saveFile('../test/peripherals/exampleSaveAs.yaml', copy=True)#Temporary
+        #self.openFile('../test/peripherals/example.yaml')#Temporary, normally will be made from open command
+        #self.saveFile('../test/peripherals/exampleSaveAs.yaml', copy=True)#Temporary
         #self.reset()
 
     data = None
@@ -118,6 +123,10 @@ class Window(QtWidgets.QMainWindow):
         self.openedFile = None
 
     def openFile(self, path: str):
+        if path == "": #TODO It should also check if the folder exists
+            #TODO Throw dialog
+            return False
+        
         with open(path) as f:
             data = yaml.load(f, Loader=yaml.FullLoader)
 
@@ -142,7 +151,6 @@ class Window(QtWidgets.QMainWindow):
             return False
 
         data = self.objectsToData()
-        print('path',type(path))
         with open(path, 'w') as f:
             yaml.dump(data, f)
 
