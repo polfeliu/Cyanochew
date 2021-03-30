@@ -1,5 +1,7 @@
-from PyQt5.Qt import QStandardItem
+from PyQt5.Qt import QStandardItem, QStyledItemDelegate
 from Field import Field
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QWidget
 
 
 class RegisterItem(QStandardItem):
@@ -33,6 +35,27 @@ class RegisterSigned(QStandardItem):
 class RegisterReadWrite(QStandardItem):
     pass
 
+class RegisterLengthDelegate(QStyledItemDelegate):
+
+    def __init__(self, owner):
+        super().__init__(owner)
+
+    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
+        editor = QtWidgets.QSpinBox(parent)
+        editor.setMinimum(0)
+        editor.setMaximum(128)
+        return editor
+
+class RegisterAddressDelegate(QStyledItemDelegate):
+
+    def __init__(self, owner):
+        super().__init__(owner)
+
+    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
+        editor = QtWidgets.QSpinBox(parent)
+        editor.setMinimum(0)
+        editor.setMaximum(2**16)
+        return editor
 
 class Register:
     RegisterItem = None
