@@ -321,7 +321,7 @@ class Window(QtWidgets.QMainWindow):
 
     def registerLayoutViewSave(self):
         #delete fields of register
-        for name, field in self.getFieldsOfRegister(self.editingRegister).items():
+        for name, field in self.getFieldsOfRegister(self.editingRegister.getName()).items():
             self.deleteField(name)
 
         #create updated fields
@@ -333,7 +333,7 @@ class Window(QtWidgets.QMainWindow):
                 'type': field.type,
                 'title': field.title,
                 'description': field.description,
-                'register': "#/registers/" + self.editingRegister
+                'register': "#/registers/" + self.editingRegister.getName()
             }
 
             self.addField(field.name, data)
@@ -344,9 +344,9 @@ class Window(QtWidgets.QMainWindow):
         self.registerLayoutView.close()
         self.registerLayoutView.deleteLater()
         self.registerLayoutView = None
-        self.editingRegister = False
+        self.editingRegister = None
 
-    editingRegister: str = None
+    editingRegister: Register = None
 
     def editRegisterSelected(self):
         index = self.RegisterTree.currentIndex()
@@ -360,9 +360,10 @@ class Window(QtWidgets.QMainWindow):
         if not isinstance(item, RegisterItem):
             return False
 
-        self.editingRegister = item.text()
-
         key = "#/registers/" + item.text()
+
+        self.editingRegister = self.objectHandles[key]
+
         fields = self.getFieldsOfRegister(item.text())
 
         if self.registerLayoutView is not None:
@@ -370,6 +371,7 @@ class Window(QtWidgets.QMainWindow):
 
         self.registerLayoutView = None
         self.registerLayoutView = RegisterLayoutView()
+        self.registerLayoutView.registerLayout.registerlength = 16
 
         self.registerLayoutView.SaveRequest.connect(self.registerLayoutViewSave)
         self.registerLayoutView.CloseRequest.connect(self.registerLayoutViewClose)
