@@ -3,6 +3,7 @@ from PyQt5.QtCore import Qt
 from typing import List, Tuple, Union
 from itertools import product
 from PyQt5.Qt import QStandardItemModel, QStandardItem
+import math
 
 # TODO When changing field name, it should validate that it doesn't already exist
 
@@ -190,7 +191,7 @@ class _RegisterLayout(QtWidgets.QWidget):
         return row, column
 
     def updateNRows(self):
-        maxrows = 1
+        maxrows = max(1, math.ceil(self.registerlength/self.bitwidth))
         for field in self.fields:
             for split in field.split:
                 maxrows = max(maxrows, split.row + 1)

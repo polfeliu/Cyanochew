@@ -136,6 +136,12 @@ class Register:
         register['readWrite'] = self.readWrite.text()
         return register
 
+    def getName(self) -> str:
+        return self.RegisterItem.text()
+
+    def getLength(self) -> int:
+        return int(self.length.text())
+
     def getRegisterViewRow(self):
         null = QStandardItem("")
         null.setEditable(False)
