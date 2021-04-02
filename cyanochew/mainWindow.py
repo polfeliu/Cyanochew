@@ -68,6 +68,9 @@ class Window(QtWidgets.QMainWindow):
 
         self.loadPropertiesFromSchema()
 
+        self.actionNew = self.findChild(QtWidgets.QAction, "actionNew")
+        self.actionNew.triggered.connect(self.newFile)
+
         self.actionOpen = self.findChild(QtWidgets.QAction, "actionOpen")
         self.actionOpen.triggered.connect(
             lambda: self.openFile(
@@ -108,7 +111,7 @@ class Window(QtWidgets.QMainWindow):
         self.log.appendPlainText(msg)
 
     def reset(self):
-        for name, handle in self.objectHandles.items(): #TODO Missing objects
+        for name, handle in self.objectHandles.items():
             if isinstance(handle, QtWidgets.QGroupBox):
                 pass
             elif isinstance(handle, QtWidgets.QCheckBox):
@@ -117,12 +120,35 @@ class Window(QtWidgets.QMainWindow):
                 handle.setAutoExclusive(False)
                 handle.setChecked(False)
                 handle.setAutoExclusive(True)
-            else:
+            elif isinstance(handle, QtWidgets.QLabel):
                 handle.clear()
+            elif isinstance(handle, QtWidgets.QLineEdit):
+                handle.clear()
+            elif isinstance(handle, QtWidgets.QSpinBox):
+                handle.clear()
+            elif isinstance(handle, QtWidgets.QDoubleSpinBox):
+                handle.clear()
+            else:
+                self.addlog(f"Cannot reset Handle {name} of type {type(handle)}")
 
         self.enableSPI(False)
         self.enableI2C(False)
         self.openedFile = None
+
+    def newFile(self):
+        diag = QtWidgets.QMessageBox()
+        diag.setIcon(QtWidgets.QMessageBox.Warning)
+        diag.setText("Do you want to create a new file?")
+        diag.setInformativeText("You will lose all unsaved changes")
+        diag.setWindowTitle("New File")
+        diag.setStandardButtons(QtWidgets.QMessageBox.Ok |QtWidgets.QMessageBox.Cancel)
+        diag.buttonClicked.connect(self.newFileAnswer)
+        diag.exec_()
+
+    def newFileAnswer(self, button):
+        if button.text() == 'OK':
+            self.reset()
+
 
     def openFile(self, path: str):
         if path == "": #TODO It should also check if the folder exists
