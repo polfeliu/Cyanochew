@@ -1,3 +1,5 @@
+from _ast import List
+
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
 from PyQt5.QtCore import Qt
 from PyQt5.Qt import QStandardItemModel, QStandardItem
@@ -5,7 +7,7 @@ from PyQt5.Qt import QStandardItemModel, QStandardItem
 import json
 import sys
 import yaml
-from Field import Field, FieldItem
+from Field import Field, FieldItem, FieldReadWriteDelegate, FieldBitStartDelegate, FieldBitEndDelegate, FieldTypeDelegate, FieldRegisterDelegate
 from Register import Register, RegisterItem, RegisterLengthDelegate, RegisterAddressDelegate, RegisterSignedDelegate, RegisterReadWriteDelegate
 from pprint import pprint
 
@@ -263,6 +265,16 @@ class Window(QtWidgets.QMainWindow):
                 return register
 
         return False
+
+
+    def getRegisterNames(self):
+        names = []
+        for key in self.objectHandles.keys():
+            if key.startswith('#/registers/'):
+                names.append(
+                    key.split('#/registers/')[1]
+                )
+        return names
 
     def addFieldToRegisterTree(self, field: Field):
         registername = field.getRegisterName()
@@ -649,6 +661,14 @@ class Window(QtWidgets.QMainWindow):
         self.FieldTree.setColumnWidth(1, 70)
         self.FieldTree.setColumnWidth(2, 70)
         self.FieldTree.setColumnWidth(3, 70)
+
+        self.FieldTree.setItemDelegateForColumn(1,FieldReadWriteDelegate(self.FieldTree))
+        self.FieldTree.setItemDelegateForColumn(2,FieldBitStartDelegate(self.FieldTree))
+        self.FieldTree.setItemDelegateForColumn(3,FieldBitEndDelegate(self.FieldTree))
+        self.FieldTree.setItemDelegateForColumn(4,FieldTypeDelegate(self.FieldTree))
+
+
+        self.FieldTree.setItemDelegateForColumn(7,FieldRegisterDelegate(self.FieldTree, self.getRegisterNames))
 
         self.Fields.addWidget(self.FieldTree)
 

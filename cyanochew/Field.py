@@ -1,6 +1,7 @@
 import sys
-from PyQt5.Qt import QStandardItem
-
+from PyQt5.Qt import QStandardItem, QStyledItemDelegate
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QWidget
 
 class FieldItem(QStandardItem):
     name = None
@@ -47,6 +48,66 @@ class NullItem(QStandardItem):
     def __init__(self):
         super(QStandardItem, self).__init__()
         self.setEditable(False)
+
+
+class FieldReadWriteDelegate(QStyledItemDelegate):
+
+    def __init__(self, owner):
+        super().__init__(owner)
+
+    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
+        editor = QtWidgets.QComboBox(parent)
+        editor.addItem("")
+        editor.addItem("R")
+        editor.addItem("R/W")
+        editor.addItem("W")
+        editor.addItem("n")
+        return editor
+
+class FieldBitStartDelegate(QStyledItemDelegate):
+
+    def __init__(self, owner):
+        super().__init__(owner)
+
+    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
+        editor = QtWidgets.QSpinBox(parent)
+        editor.setMinimum(0)
+        editor.setMaximum(128)
+        return editor
+
+class FieldBitEndDelegate(QStyledItemDelegate):
+
+    def __init__(self, owner):
+        super().__init__(owner)
+
+    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
+        editor = QtWidgets.QSpinBox(parent)
+        editor.setMinimum(0)
+        editor.setMaximum(128)
+        return editor
+
+class FieldTypeDelegate(QStyledItemDelegate):
+
+    def __init__(self, owner):
+        super().__init__(owner)
+
+    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
+        editor = QtWidgets.QComboBox(parent)
+        editor.addItem("")
+        editor.addItem("enum")
+        editor.addItem("number")
+        return editor
+
+class FieldRegisterDelegate(QStyledItemDelegate):
+    def __init__(self, owner, getter):
+        super().__init__(owner)
+        self.getter = getter
+
+    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
+        editor = QtWidgets.QComboBox(parent)
+        editor.addItem("")
+        editor.addItems(self.getter())
+        return editor
 
 
 class Field:
