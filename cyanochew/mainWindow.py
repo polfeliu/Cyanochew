@@ -131,6 +131,8 @@ class Window(QtWidgets.QMainWindow):
             else:
                 self.addlog(f"Cannot reset Handle {name} of type {type(handle)}")
 
+        #TODO Delete All registers and fields
+
         self.enableSPI(False)
         self.enableI2C(False)
         self.openedFile = None
@@ -148,6 +150,9 @@ class Window(QtWidgets.QMainWindow):
     def newFileAnswer(self, button):
         if button.text() == 'OK':
             self.reset()
+            self.actionSave.setEnabled(False)
+            self.actionSaveAs.setEnabled(True)
+            self.actionSaveCopy.setEnabled(False)
 
 
     def openFile(self, path: str):
@@ -179,7 +184,7 @@ class Window(QtWidgets.QMainWindow):
             self.actionSaveCopy.setEnabled(True)
 
 
-    originalData = None
+    originalData = {}
     openedFile = None
 
     def saveFile(self, path: str, copy: bool = False):
@@ -194,6 +199,11 @@ class Window(QtWidgets.QMainWindow):
         if not copy:
             self.openedFile = path
             self.originalData = data
+
+        #If its a new file these actions wont be enabled
+        self.actionSave.setEnabled(True)
+        self.actionSaveCopy.setEnabled(True)
+
 
     def objectsToData(self):
         data = {}
