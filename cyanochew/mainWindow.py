@@ -431,7 +431,8 @@ class Window(QtWidgets.QMainWindow):
     def deleteFieldSelected(self):
         index = self.FieldTree.currentIndex()
         item = self.FieldsModel.item(index.row())
-        self.deleteField(item.text())
+        if isinstance(item, FieldItem):
+            self.deleteField(item.text())
 
     def deleteField(self, name: str):
         key = "#/fields/" + name
