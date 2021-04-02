@@ -231,7 +231,7 @@ class Window(QtWidgets.QMainWindow):
     def addField(self, name: str, field: dict):
         f = Field(name, field)
         self.FieldsTreeRoot.appendRow(f.getFieldViewRow())
-        self.objectHandles["#/fields/" + name] = f #TODO
+        self.objectHandles["#/fields/" + name] = f
         self.addFieldToRegisterTree(f)
 
     def getField(self, fieldname: str):
@@ -396,7 +396,25 @@ class Window(QtWidgets.QMainWindow):
             self.RegistersModel.removeRow(register.getRegisterViewRowIndex())
 
     def newField(self):
-        pass#TODO
+        names = [name for name in self.objectHandles.keys() if name.startswith("#/fields/newField")]
+        if len(names):
+            num = 1
+            for name in names:
+                try:
+                    split = name.split("#/fields/newField")
+                    num = max(num, int(split[1]))
+                except:
+                    pass
+
+            name = "newField" + str(num + 1)
+        else:
+            name = "newField"
+
+        field = {  # Required fields
+            'title': f"title of {name}",
+            'description': f"description of {name}",
+        }
+        self.addField(name, field)
 
     def deleteFieldSelected(self):
         index = self.FieldTree.currentIndex()
