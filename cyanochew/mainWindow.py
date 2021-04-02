@@ -1,4 +1,4 @@
-from _ast import List
+from _ast import List, Dict
 
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
 from PyQt5.QtCore import Qt
@@ -285,7 +285,7 @@ class Window(QtWidgets.QMainWindow):
         if isinstance(register, Register):
             register.addFieldToTree(field)
 
-    def getFieldsOfRegister(self, registername):
+    def getFieldsOfRegister(self, registername) -> Dict(Field):
         fields = {}
         for address, item in self.objectHandles.items():
             if isinstance(item, Field):
@@ -610,9 +610,15 @@ class Window(QtWidgets.QMainWindow):
         if isinstance(item, RegisterItem): #Changed Name
             newname = self.RegistersModel.item(item.index().row(), 0).text()
             oldname = item.name
+
+            #change fields that point to this register
+            for fieldname, field in self.getFieldsOfRegister(oldname).items():
+                field.register.setText(newname)
+
             item.name = newname #Update Name
             #move handle of name
             self.objectHandles[f'#/registers/{newname}'] = self.objectHandles.pop(f'#/registers/{oldname}')
+
 
     def FieldsItemChanged(self, item):
         if isinstance(item, FieldItem): #Changed Name
