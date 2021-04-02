@@ -151,12 +151,21 @@ class Window(QtWidgets.QMainWindow):
 
 
     def openFile(self, path: str):
-        if path == "": #TODO It should also check if the folder exists
-            #TODO Throw dialog
+        if path == "":
             return False
         
         with open(path) as f:
-            data = yaml.load(f, Loader=yaml.FullLoader)
+            try:
+                data = yaml.load(f, Loader=yaml.FullLoader)
+            except:
+                diag = QtWidgets.QMessageBox()
+                diag.setIcon(QtWidgets.QMessageBox.Critical)
+                diag.setText("The selected file is invalid")
+                diag.setWindowTitle("Invalid File")
+                diag.setStandardButtons(QtWidgets.QMessageBox.Ok)
+                diag.exec_()
+                return False
+
 
             self.enableI2C('i2c' in data)
             self.enableSPI('spi' in data)
