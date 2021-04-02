@@ -531,6 +531,9 @@ class Window(QtWidgets.QMainWindow):
             else:
                 print(group)
 
+        self.enableSPI(False)
+        self.enableI2C(False)
+
     def createRegistersUI(self):
         #Button
         buttons = QtWidgets.QHBoxLayout()
