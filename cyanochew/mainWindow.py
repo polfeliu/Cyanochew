@@ -6,7 +6,7 @@ import json
 import sys
 import yaml
 from Field import Field, FieldItem
-from Register import Register, RegisterItem, RegisterLengthDelegate, RegisterAddressDelegate
+from Register import Register, RegisterItem, RegisterLengthDelegate, RegisterAddressDelegate, RegisterSignedDelegate, RegisterReadWriteDelegate
 from pprint import pprint
 
 from registerLayout import RegisterLayoutView
@@ -589,6 +589,8 @@ class Window(QtWidgets.QMainWindow):
 
         self.RegisterTree.setItemDelegateForColumn(1,RegisterAddressDelegate(self.RegisterTree))
         self.RegisterTree.setItemDelegateForColumn(2,RegisterLengthDelegate(self.RegisterTree))
+        self.RegisterTree.setItemDelegateForColumn(3, RegisterSignedDelegate(self.RegisterTree))
+        self.RegisterTree.setItemDelegateForColumn(4, RegisterReadWriteDelegate(self.RegisterTree))
 
         self.Registers.addWidget(self.RegisterTree)
 

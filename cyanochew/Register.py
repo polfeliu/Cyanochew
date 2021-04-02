@@ -57,6 +57,32 @@ class RegisterAddressDelegate(QStyledItemDelegate):
         editor.setMaximum(2**16)
         return editor
 
+class RegisterSignedDelegate(QStyledItemDelegate):
+
+    def __init__(self, owner):
+        super().__init__(owner)
+
+    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
+        editor = QtWidgets.QComboBox(parent)
+        editor.addItem("")
+        editor.addItem("true")
+        editor.addItem("false")
+        return editor
+
+class RegisterReadWriteDelegate(QStyledItemDelegate):
+
+    def __init__(self, owner):
+        super().__init__(owner)
+
+    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
+        editor = QtWidgets.QComboBox(parent)
+        editor.addItem("")
+        editor.addItem("R")
+        editor.addItem("R/W")
+        editor.addItem("W")
+        editor.addItem("n")
+        return editor
+
 class Register:
     RegisterItem = None
 

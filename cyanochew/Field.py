@@ -95,7 +95,7 @@ class Field:
         if 'readWrite' in data:  # Required
             self.readWrite = FieldReadWrite(data['readWrite'])
         else:
-            self.readWrite = FieldReadWrite('n')
+            self.readWrite = FieldReadWrite('')
 
         if 'type' in data:
             self.type = FieldType(data['type'])
