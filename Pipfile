@@ -6,7 +6,6 @@ name = "pypi"
 [packages]
 pyqt5 = "*"
 pyyaml = "*"
-cyanobyte = "*"
 sly = "*"
 
 [dev-packages]

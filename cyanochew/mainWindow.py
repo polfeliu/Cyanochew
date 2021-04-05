@@ -7,7 +7,7 @@ from PyQt5.Qt import QStandardItemModel, QStandardItem
 import json
 import sys
 import yaml
-from Field import Field, FieldItem, FieldReadWriteDelegate, FieldBitStartDelegate, FieldBitEndDelegate, FieldTypeDelegate, FieldRegisterDelegate
+from Field import Field, FieldItem, FieldRegister, FieldReadWriteDelegate, FieldBitStartDelegate, FieldBitEndDelegate, FieldTypeDelegate, FieldRegisterDelegate
 from Register import Register, RegisterItem, RegisterLengthDelegate, RegisterAddressDelegate, RegisterSignedDelegate, RegisterReadWriteDelegate
 from pprint import pprint
 
@@ -500,17 +500,22 @@ class Window(QtWidgets.QMainWindow):
         register = self.objectHandles[registerkey]
         if not isinstance(register, Register):
             return False
-        registerModel = self.RegistersModel.item(register.getRegisterViewRowIndex())
+
+        registerItem = self.RegistersModel.item(register.getRegisterViewRowIndex())
+        if not isinstance(registerItem, RegisterItem):
+            return False
 
         index = None
 
-        for i in range(registerModel.rowCount()):
-            field = registerModel.child(i,0)
-            if field.text() == fieldname:
-                index = i;
+        for i in range(registerItem.rowCount()): #Search the field child item
+            field = registerItem.child(i, 0)
+            if isinstance(field, FieldItem):
+                print(field.text())
+                if field.text() == fieldname:
+                    index = i;
 
         if index is not None:
-            registerModel.removeRow(index)
+            registerItem.removeRow(index)
 
     def setObject(self, address, value):
         if address in self.objectHandles:
@@ -676,7 +681,7 @@ class Window(QtWidgets.QMainWindow):
             oldname = item.name
             item.name = newname #Update Name
             #move handle of name
-            self.objectHandles[f'#/fields/{newname}'] = self.objectHandles.pop(f'#/fields/{oldname}')
+            self.objectHandles[f'#/fields/{newname}'] = self.objectHandles.pop(f'#/fields/{oldname}') #Pop returns the value itself, that is reassigned to the new key
             name = newname
         else: #Changed Field props
             name = self.FieldsModel.item(item.index().row(), 0).text()
@@ -684,6 +689,22 @@ class Window(QtWidgets.QMainWindow):
         field = self.getField(name)
         if isinstance(field, Field):
             field.itemDataChanged(item)
+
+        if isinstance(item, FieldRegister):
+            fieldname = self.FieldsModel.item(item.index().row(), 0).text()
+            newregistername = self.FieldsModel.item(item.index().row(), 7).text()
+            oldregistername = item.name
+
+            item.name = newregistername #Update register name
+
+            self.removeFieldOfRegisterTree(oldregistername, fieldname)
+
+            field = self.getField(fieldname)
+
+            if isinstance(field, Field):
+                self.addFieldToRegisterTree(field)
+
+
 
 
     def createFieldsUI(self):

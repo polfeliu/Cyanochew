@@ -33,6 +33,9 @@ class FieldReadWrite(QStandardItem):
 
 
 class FieldRegister(QStandardItem):
+    def __init__(self, name: str):
+        self.name = name
+        super().__init__(name)
     pass
 
 
