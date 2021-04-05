@@ -55,13 +55,11 @@ class FieldReadWriteDelegate(QStyledItemDelegate):
     def __init__(self, owner):
         super().__init__(owner)
 
+    valid = ["R", "R/W", "W", "n"]
+
     def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
         editor = QtWidgets.QComboBox(parent)
-        editor.addItem("")
-        editor.addItem("R")
-        editor.addItem("R/W")
-        editor.addItem("W")
-        editor.addItem("n")
+        editor.addItems(self.valid)
         return editor
 
 class FieldBitStartDelegate(QStyledItemDelegate):
@@ -91,17 +89,18 @@ class FieldTypeDelegate(QStyledItemDelegate):
     def __init__(self, owner):
         super().__init__(owner)
 
+    valid = ['enum', 'number']
+
     def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
         editor = QtWidgets.QComboBox(parent)
         editor.addItem("")
-        editor.addItem("enum")
-        editor.addItem("number")
+        editor.addItems(self.valid)
         return editor
 
 class FieldRegisterDelegate(QStyledItemDelegate):
     def __init__(self, owner, getter):
         super().__init__(owner)
-        self.getter = getter
+        self.getter = getter #The getter function passed should list the possible registers
 
     def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
         editor = QtWidgets.QComboBox(parent)
@@ -180,14 +179,21 @@ class Field:
 
     def toData(self):
         field = {}
-        field['readWrite'] = self.readWrite.text()
+        field['readWrite'] = self.readWrite.text()#required
         field['bitStart'] = int(self.bitStart.text())
         field['bitEnd'] = int(self.bitEnd.text())
-        field['type'] = self.type.text()
-        field['title'] = self.title.text()
-        field['description'] = self.description.text()
+
+        if self.type.text() in FieldTypeDelegate.valid:
+            field['type'] = self.type.text()
+
+        field['title'] = self.title.text()#required
+        field['description'] = self.description.text()#required
+
         field['enum'] = self.enum
-        field['register'] = "#/registers/" + self.register.text()
+
+        if self.register.text() != '':
+            field['register'] = "#/registers/" + self.register.text()
+
         return field
 
     def getFieldViewRow(self):

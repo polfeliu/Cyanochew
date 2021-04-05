@@ -6,7 +6,7 @@ fields:
     bitEnd: 4
     bitStart: 7
     description: This is a few bits
-    enum: []
+    enum: null
     readWrite: R
     register: '#/registers/RegisterA'
     title: Read-only fields for RegisterA
@@ -36,7 +36,7 @@ fields:
     bitEnd: 1
     bitStart: 1
     description: A single-bit
-    enum: []
+    enum: null
     readWrite: R/W
     register: '#/registers/RegisterA'
     title: Read/write field for RegisterA
@@ -45,7 +45,7 @@ fields:
     bitEnd: 0
     bitStart: 0
     description: A bit that is neither readable nor writeable
-    enum: []
+    enum: null
     readWrite: n
     register: '#/registers/RegisterC'
     title: This field should never appear
@@ -127,33 +127,24 @@ info:
   package: com.cyanobyte
   title: Example
   version: 0.1.0
-  x-foo: x-bar
 registers:
   RegisterA:
     address: 0
     description: An 8-bit register
     length: 8
-    readWrite: ND
-    signed: ND
     title: First example
   RegisterB:
     address: 1
     description: A 16-bit register
     length: 16
-    readWrite: ND
-    signed: ND
     title: Second example
   RegisterC:
     address: 2
     description: A 32-bit register
     length: 32
-    readWrite: ND
-    signed: ND
     title: Third example
   RegisterD:
     address: 3
     description: A dummy register that has no data
     length: 0
-    readWrite: ND
-    signed: ND
     title: Fourth example

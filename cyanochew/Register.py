@@ -62,11 +62,12 @@ class RegisterSignedDelegate(QStyledItemDelegate):
     def __init__(self, owner):
         super().__init__(owner)
 
+    valid = ["true", "false"]
+
     def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
         editor = QtWidgets.QComboBox(parent)
-        editor.addItem("")
-        editor.addItem("true")
-        editor.addItem("false")
+        editor.addItem("") #Allow to be undefined
+        editor.addItems(self.valid)
         return editor
 
 class RegisterReadWriteDelegate(QStyledItemDelegate):
@@ -74,13 +75,12 @@ class RegisterReadWriteDelegate(QStyledItemDelegate):
     def __init__(self, owner):
         super().__init__(owner)
 
+    valid = ["R", "R/W", "W", "n"]
+
     def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
         editor = QtWidgets.QComboBox(parent)
-        editor.addItem("")
-        editor.addItem("R")
-        editor.addItem("R/W")
-        editor.addItem("W")
-        editor.addItem("n")
+        editor.addItem("") #Allow to be undefined
+        editor.addItems(self.valid)
         return editor
 
 class Register:
@@ -128,12 +128,19 @@ class Register:
 
     def toData(self):
         register = {}
-        register['title'] = self.title.text()
-        register['description'] = self.description.text()
-        register['address'] = int(self.address.text())
-        register['length'] = int(self.length.text())
-        register['signed'] = self.signed.text()
-        register['readWrite'] = self.readWrite.text()
+        register['title'] = self.title.text() # required
+        register['description'] = self.description.text() # required
+        register['address'] = int(self.address.text()) # required
+        register['length'] = int(self.length.text()) # required
+
+        if self.signed.text() in RegisterSignedDelegate.valid:
+            register['signed']  = self.signed.text()
+            #else don't define it as it's not required
+
+        if self.readWrite.text() in RegisterReadWriteDelegate.valid:
+            register['readWrite'] = self.readWrite.text()
+            # else don't define it as it's not required
+
         return register
 
     def getName(self) -> str:
