@@ -21,9 +21,6 @@ class Window(QtWidgets.QMainWindow):
         super(Window, self).__init__()
         uic.loadUi("mainWindow.ui", self)
 
-        self.cyanobyteVersion = self.findChild(QtWidgets.QLabel, "cyanobyteVersion")
-        self.objectHandles["#/cyanobyte"] = self.cyanobyteVersion
-
         info = self.findChild(QtWidgets.QWidget, "Info")
         self.info = QtWidgets.QFormLayout()
         info.setLayout(self.info)
@@ -605,7 +602,12 @@ class Window(QtWidgets.QMainWindow):
             elif group == "extensions":
                 pass
             elif group == "cyanobyte":
-                pass
+                self.createLineObject(
+                    "cyanobyte",
+                    groupdata['description'],
+                    None,
+                    self.info, #The version of cyanobyte is not on the info group of the yaml file, but its a good place for it rather than have it's own tab.
+                    "#/cyanobyte")
             else:
                 print(group)
 
@@ -668,7 +670,7 @@ class Window(QtWidgets.QMainWindow):
             self.objectHandles[f'#/registers/{newname}'] = self.objectHandles.pop(f'#/registers/{oldname}')
 
 
-    def FieldsItemChanged(self, item):
+    def FieldsItemChanged(self, item): #TODO If change register remove from register tree
         if isinstance(item, FieldItem): #Changed Name
             newname = self.FieldsModel.item(item.index().row(), 0).text()
             oldname = item.name
