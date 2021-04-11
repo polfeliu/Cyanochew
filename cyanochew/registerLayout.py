@@ -52,21 +52,23 @@ class FieldLayoutItem():
 
     split: List[SplitField] = []
 
-    def calculateSplit(self, width: int):
-        columnend = self.bitEnd % width
-        rowend = self.bitEnd // width
+    def calculateSplit(self, layoutwidth: int):
+        columnend = self.bitEnd % layoutwidth
+        rowend = self.bitEnd // layoutwidth
 
-        columnstart = self.bitStart % width
-        rowstart = self.bitStart // width
+        columnstart = self.bitStart % layoutwidth
+        rowstart = self.bitStart // layoutwidth
 
         self.split = []
 
         splitbitend = 0
         splitbitstart = 0
 
+        print("##########")
         for row in range(rowend, rowstart+1):
             sf = SplitField()
             if row == rowend: #First row
+                print("first row")
                 sf.end = columnend
                 sf.EndHandle = True
             else:
@@ -74,10 +76,11 @@ class FieldLayoutItem():
                 sf.EndHandle = False
 
             if row == rowstart: #Last Row
+                print("last row")
                 sf.start = columnstart
                 sf.StartHandle = True
             else:
-                sf.start = width - 1
+                sf.start = layoutwidth - 1
                 sf.StartHandle = False
 
             sf.row = row
@@ -160,7 +163,7 @@ class _RegisterLayout(QtWidgets.QWidget):
     def updateSplitFields(self):
         for field in self.fields:
             field.calculateSplit(
-                width=self.bitwidth
+                layoutwidth=self.bitwidth
             )
 
         self.calculateOverlapping()
