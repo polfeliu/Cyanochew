@@ -441,7 +441,7 @@ class _RegisterLayout(QtWidgets.QWidget):
                 num = 1
                 for title in newtitles:
                     try:
-                        split = title.split("#/registers/newRegister")
+                        split = title.split(f'newField')
                         num = max(num, int(split[1]))
                     except:
                         pass
