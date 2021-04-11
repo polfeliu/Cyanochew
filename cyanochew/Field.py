@@ -172,6 +172,9 @@ class Field:
         else:
             self.title = FieldTitle("")
 
+    def getName(self) -> str:
+        return self.FieldItem.text()
+
     def toData(self):
         field = {}
         field['readWrite'] = self.readWrite.text()#required

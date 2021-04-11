@@ -108,6 +108,8 @@ class Window(QtWidgets.QMainWindow):
         self.log.appendPlainText(msg)
 
     def reset(self):
+        regs = []
+        fields = []
         for name, handle in self.objectHandles.items():
             if isinstance(handle, QtWidgets.QGroupBox):
                 pass
@@ -125,10 +127,18 @@ class Window(QtWidgets.QMainWindow):
                 handle.clear()
             elif isinstance(handle, QtWidgets.QDoubleSpinBox):
                 handle.clear()
+            elif isinstance(handle, Register):
+                regs.append(handle.getName()) #Registers and Fields must be stored in an array and deleted outside the loop as the datahandle cannot be removed during the loop iterations
+            elif isinstance(handle, Field):
+                fields.append(handle.getName())
             else:
                 self.addlog(f"Cannot reset Handle {name} of type {type(handle)}")
 
-        #TODO Delete All registers and fields
+        for reg in regs:
+            self.deleteRegister(reg)
+
+        for field in fields:
+            self.deleteField(field)
 
         self.enableSPI(False)
         self.enableI2C(False)
@@ -168,6 +178,7 @@ class Window(QtWidgets.QMainWindow):
                 diag.exec_()
                 return False
 
+            self.reset()
 
             self.enableI2C('i2c' in data)
             self.enableSPI('spi' in data)
