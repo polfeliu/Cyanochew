@@ -115,6 +115,8 @@ class _RegisterLayout(QtWidgets.QWidget):
 
     _padding: int = 4
 
+    registername: str = ""
+
     registerlength: int = 8
 
     selected: FieldLayoutItem = None
@@ -434,15 +436,33 @@ class _RegisterLayout(QtWidgets.QWidget):
         if self.selected is not None:
             self.DoubleClickField.emit()
         else:
+            newtitles = [field.title for field in self.fields if field.title.startswith(f'newField')]
+            if len(newtitles):
+                num = 1
+                for title in newtitles:
+                    try:
+                        split = title.split("#/registers/newRegister")
+                        num = max(num, int(split[1]))
+                    except:
+                        pass
+
+                name  = f'{self.registername}_newField{num+1}'
+                title = f'newField{num + 1}'
+            else:
+                name = f'{self.registername}_newField'
+                title = f'newField'
+
+
+
             row, column = self.PosToField(e.x(), e.y())
             pos = int(column + row * self.bitwidth)
-            f = self.newField('newField', {
+            f = self.newField(name, {
                 'bitEnd': pos,
                 'bitStart': pos,
                 'description': "",
                 'readWrite': "",
                 'register': "",
-                'title': "",
+                'title': title,
                 'type': ""
             })
             if isinstance(f, FieldLayoutItem):
@@ -761,6 +781,8 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication([])
     exampleView = RegisterLayoutView()
+    exampleView.registerLayout.registername = "regA"
+
     exampleView.registerLayout.newField(
         "exampleField",
         {
