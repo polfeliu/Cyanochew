@@ -5,6 +5,8 @@ from itertools import product
 from PyQt5.Qt import QStandardItemModel, QStandardItem
 import math
 
+from Field import FieldTypeDelegate, FieldReadWriteDelegate
+
 # TODO When changing field name, it should validate that it doesn't already exist
 
 
@@ -64,11 +66,9 @@ class FieldLayoutItem():
         splitbitend = 0
         splitbitstart = 0
 
-        print("##########")
         for row in range(rowend, rowstart+1):
             sf = SplitField()
             if row == rowend: #First row
-                print("first row")
                 sf.end = columnend
                 sf.EndHandle = True
             else:
@@ -76,7 +76,6 @@ class FieldLayoutItem():
                 sf.EndHandle = False
 
             if row == rowstart: #Last Row
-                print("last row")
                 sf.start = columnstart
                 sf.StartHandle = True
             else:
@@ -89,7 +88,7 @@ class FieldLayoutItem():
             splitbitstart = splitbitend + width - 1
 
             sf.text = "%s\r\n[%i:%i]" % (
-                self.name,
+                self.title,
                 splitbitstart,
                 splitbitend
             )
@@ -144,7 +143,7 @@ class _RegisterLayout(QtWidgets.QWidget):
             )
             self.fields.append(f)
             self.UpdatedData.emit()
-            return True
+            return f
         except KeyError:
             return False
 
@@ -372,12 +371,30 @@ class _RegisterLayout(QtWidgets.QWidget):
             self.changeSelectedFieldData(start, end)
             self.UpdatedData.emit()
 
-    def changeSelectedFieldData(self, start: int = None, end: int = None):
+    def changeSelectedFieldData(self,
+                                start: int = None,
+                                end: int = None,
+                                name: int = None,
+                                description: str = None,
+                                readWrite: str = None,
+                                title: str = None,
+                                type: str = None
+                        ):
         if self.selected is not None:
             if start is not None:
                 self.selected.bitStart = start
             if end is not None:
                 self.selected.bitEnd = end
+            if name is not None:
+                self.selected.name = name
+            if description is not None:
+                self.selected.description = description
+            if readWrite is not None:
+                self.selected.readWrite = readWrite
+            if title is not None:
+                self.selected.title = title
+            if type is not None:
+               self.selected.type = type
         self.update()
 
     def mouseReleaseEvent(self, e):
@@ -470,6 +487,7 @@ class _RegisterLayout(QtWidgets.QWidget):
             })
             if isinstance(f, FieldLayoutItem):
                 self.setSelected(f)
+                self.DoubleClickField.emit()
 
     def setSelected(self, field: FieldLayoutItem = None):
         self.selected = field
@@ -549,16 +567,28 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.saveButton.clicked.connect(self.SaveRequest.emit)
         self.sideBar.addWidget(self.saveButton)
 
-        self.selectedName = QtWidgets.QLineEdit("")
-        self.selectedName.setAlignment(QtCore.Qt.AlignCenter)
         font = QtGui.QFont()
         font.setPointSize(11)
-        self.selectedName.setFont(font)
-        self.selectedName.setReadOnly(True)
-        self.selectedName.textChanged.connect(self.updateName)
-        self.sideBar.addWidget(self.selectedName)
 
-        self.registerLayout.DoubleClickField.connect(self.focusName)
+        NameLabel = QtWidgets.QLabel("Name")
+        self.sideBar.addWidget(NameLabel)
+        self.LineEditName = QtWidgets.QLineEdit("")
+        self.LineEditName.setAlignment(QtCore.Qt.AlignCenter)
+        self.LineEditName.setFont(font)
+        self.LineEditName.setReadOnly(True)
+        self.LineEditName.textChanged.connect(self.updateName)
+        self.sideBar.addWidget(self.LineEditName)
+
+        TitleLabel = QtWidgets.QLabel("Title")
+        self.sideBar.addWidget(TitleLabel)
+        self.LineEditTitle = QtWidgets.QLineEdit("")
+        self.LineEditTitle.setAlignment(QtCore.Qt.AlignCenter)
+        self.LineEditTitle.setFont(font)
+        self.LineEditTitle.setReadOnly(True)
+        self.LineEditTitle.textChanged.connect(self.updateTitle)
+        self.sideBar.addWidget(self.LineEditTitle)
+
+        self.registerLayout.DoubleClickField.connect(self.focusTitle)
 
         startLabel = QtWidgets.QLabel("Start")
         startLabel.setContentsMargins(0, 10, 0, 0)
@@ -589,6 +619,24 @@ class RegisterLayoutView(QtWidgets.QWidget):
         self.spinWidth.setMaximum(1000)
         self.spinWidth.valueChanged.connect(self.updateSpinWidth)
         self.sideBar.addWidget(self.spinWidth)
+
+        descriptionLabel = QtWidgets.QLabel("Description")
+        self.sideBar.addWidget(descriptionLabel)
+        self.DescriptionTextEdit = QtWidgets.QTextEdit()
+        self.DescriptionTextEdit.textChanged.connect(self.updateDescription)
+        self.sideBar.addWidget(self.DescriptionTextEdit)
+
+        descriptionLabel = QtWidgets.QLabel("Read/Write")
+        self.sideBar.addWidget(descriptionLabel)
+        self.ReadWriteComboBox = FieldReadWriteDelegate(None).createEditor(None, None, None)
+        self.ReadWriteComboBox.currentIndexChanged.connect(self.updateReadWrite)
+        self.sideBar.addWidget(self.ReadWriteComboBox)
+
+        typeLabel = QtWidgets.QLabel("Type")
+        self.sideBar.addWidget(typeLabel)
+        self.TypeComboBox = FieldTypeDelegate(None).createEditor(None, None, None)
+        self.TypeComboBox.currentIndexChanged.connect(self.updateType)
+        self.sideBar.addWidget(self.TypeComboBox)
 
         spacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.sideBar.addSpacerItem(spacer)
@@ -652,15 +700,32 @@ class RegisterLayoutView(QtWidgets.QWidget):
         if e.key() == QtCore.Qt.Key_Delete:
             self.deleteSelectedField()
 
-    def focusName(self):
-        self.selectedName.setFocus()
-        self.selectedName.selectAll()
+    def focusTitle(self):
+        self.LineEditTitle.setFocus()
+        self.LineEditTitle.selectAll()
 
     def updateName(self):
-        if self.registerLayout.selected is not None:
-            self.registerLayout.selected.name = self.selectedName.text()
-            self.registerLayout.update()
-            self.updateList()
+        pass
+
+    def updateDescription(self):
+        self.registerLayout.changeSelectedFieldData(
+            description= self.DescriptionTextEdit.toPlainText()
+        )
+
+    def updateReadWrite(self):
+        self.registerLayout.changeSelectedFieldData(
+            readWrite=self.ReadWriteComboBox.currentText()
+        )
+
+    def updateType(self):
+        self.registerLayout.changeSelectedFieldData(
+            type= self.TypeComboBox.currentText()
+        )
+
+    def updateTitle(self):
+        self.registerLayout.changeSelectedFieldData(
+            title=self.LineEditTitle.text()
+        )
 
     def updateBitWidth(self):
         self.registerLayout.bitwidth = self.bitwidthSpin.value()
@@ -684,30 +749,45 @@ class RegisterLayoutView(QtWidgets.QWidget):
         if isinstance(field, FieldLayoutItem):
             i = field.listItem.index()
             self.fieldlistView.selectionModel().select(i,QtCore.QItemSelectionModel.ClearAndSelect)
+            self.LineEditName.setReadOnly(False)
+            self.LineEditTitle.setReadOnly(False)
             self.spinStart.setEnabled(True)
             self.spinEnd.setEnabled(True)
             self.spinWidth.setEnabled(True)
-            self.selectedName.setReadOnly(False)
+            self.DescriptionTextEdit.setReadOnly(False)
+            self.ReadWriteComboBox.setEnabled(True)
+            self.TypeComboBox.setEnabled(True)
         else:
             self.fieldlistView.selectionModel().clearSelection()
+            self.LineEditName.setReadOnly(True)
+            self.LineEditTitle.setReadOnly(True)
             self.spinStart.setEnabled(False)
             self.spinEnd.setEnabled(False)
             self.spinWidth.setEnabled(False)
-            self.selectedName.setReadOnly(True)
+            self.DescriptionTextEdit.setReadOnly(True)
+            self.ReadWriteComboBox.setEnabled(False)
+            self.TypeComboBox.setEnabled(False)
 
         self.updateSelectedData()
 
-
     def updateSelectedData(self):
         if self.registerLayout.selected is not None:
+            self.LineEditName.setText(self.registerLayout.selected.name)
+            self.LineEditTitle.setText(self.registerLayout.selected.title)
+
             start = self.registerLayout.selected.bitStart
             end = self.registerLayout.selected.bitEnd
             self.spinStart.setValue(start)
             self.spinEnd.setValue(end)
             self.spinWidth.setValue(start-end + 1)
-            self.selectedName.setText(self.registerLayout.selected.name)
+
+            self.DescriptionTextEdit.setText(self.registerLayout.selected.description)
+            self.ReadWriteComboBox.setCurrentText(self.registerLayout.selected.readWrite)
+            self.TypeComboBox.setCurrentText(self.registerLayout.selected.type)
+
         else:
-            self.selectedName.setText("Select Field")
+            self.LineEditName.setText("Select Field")
+            self.LineEditTitle.setText("Select Field")
 
 
     def updatedData(self):
@@ -746,7 +826,7 @@ class RegisterLayoutView(QtWidgets.QWidget):
             else:
                 self.spinWidth.setValue(1)
 
-    def updateList(self):
+    def updateList(self): #TODO Upgrade to a table, with more data
         self.fieldlistModel.clear()
         for field in self.registerLayout.fields:
             field.listItem = QStandardItem(field.name)

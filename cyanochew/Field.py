@@ -60,7 +60,7 @@ class FieldReadWriteDelegate(QStyledItemDelegate):
 
     valid = ["R", "R/W", "W", "n"]
 
-    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
+    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QtWidgets.QComboBox:
         editor = QtWidgets.QComboBox(parent)
         editor.addItems(self.valid)
         return editor
@@ -70,7 +70,7 @@ class FieldBitStartDelegate(QStyledItemDelegate):
     def __init__(self, owner):
         super().__init__(owner)
 
-    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
+    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QtWidgets.QSpinBox:
         editor = QtWidgets.QSpinBox(parent)
         editor.setMinimum(0)
         editor.setMaximum(128)
@@ -81,7 +81,7 @@ class FieldBitEndDelegate(QStyledItemDelegate):
     def __init__(self, owner):
         super().__init__(owner)
 
-    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
+    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QtWidgets.QSpinBox:
         editor = QtWidgets.QSpinBox(parent)
         editor.setMinimum(0)
         editor.setMaximum(128)
@@ -94,7 +94,7 @@ class FieldTypeDelegate(QStyledItemDelegate):
 
     valid = ['enum', 'number']
 
-    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
+    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QtWidgets.QComboBox:
         editor = QtWidgets.QComboBox(parent)
         editor.addItem("")
         editor.addItems(self.valid)
@@ -105,7 +105,7 @@ class FieldRegisterDelegate(QStyledItemDelegate):
         super().__init__(owner)
         self.getter = getter #The getter function passed should list the possible registers
 
-    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
+    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QtWidgets.QComboBox:
         editor = QtWidgets.QComboBox(parent)
         editor.addItem("")
         editor.addItems(self.getter())
