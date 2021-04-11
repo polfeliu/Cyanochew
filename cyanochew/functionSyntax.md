@@ -1,15 +1,27 @@
-# Function declaration
-declares input variables(s) and return variable(s)
-```
-def funcname(
-	in1: int16,
-	in2: float32
-) -> out1: float32, out2: int8
-```
-
 # Comments
 ```
 # Hello I'm a comment
+```
+
+# Function declaration
+declares input variables(s) and return variable(s)
+
+inline
+```
+def funcname(in: int16, in2: float32) -> out: int64:
+    #Body of the function
+```
+
+breaking lines and parentheses for multiple output variables
+```
+def funcname(
+    in1: int16,
+    in2: float32
+) -> (
+    out1: float32, 
+    out2: int8
+):
+    #Body of the function
 ```
 
 # Expressions
