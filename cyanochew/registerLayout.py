@@ -77,7 +77,7 @@ class FieldLayoutItem():
                 sf.start = columnstart
                 sf.StartHandle = True
             else:
-                sf.start = 7
+                sf.start = width - 1
                 sf.StartHandle = False
 
             sf.row = row
