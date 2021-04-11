@@ -686,7 +686,7 @@ class Window(QtWidgets.QMainWindow):
             self.objectHandles[f'#/registers/{newname}'] = self.objectHandles.pop(f'#/registers/{oldname}')
 
 
-    def FieldsItemChanged(self, item): #TODO If change register remove from register tree
+    def FieldsItemChanged(self, item):
         if isinstance(item, FieldItem): #Changed Name
             newname = self.FieldsModel.item(item.index().row(), 0).text()
             oldname = item.name
