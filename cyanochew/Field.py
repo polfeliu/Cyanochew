@@ -131,8 +131,6 @@ class Field:
     def __init__(self, name: str, data: dict):
 
         self.FieldItem = FieldItem(name)
-        self.registerViewFieldItem = FieldItem(name)
-        self.registerViewFieldItem.setEditable(False)
 
         if 'bitEnd' in data: #Spec does not require, but I think it should
             self.bitEnd = FieldBitEnd(int(data['bitEnd']))
@@ -146,11 +144,8 @@ class Field:
 
         if 'description' in data:  # Required
             self.description = FieldDescription(data['description'])
-            self.registerViewDescription = FieldDescription(data['description'])
         else:
             self.description = FieldDescription("")
-            self.registerViewDescription = FieldDescription("")
-        self.registerViewDescription.setEditable(False)
 
         if 'enum' in data:  # TODO, for now storing the data on the same dict
             self.enum = data['enum']
@@ -174,11 +169,8 @@ class Field:
 
         if 'title' in data:  # Required
             self.title = FieldTitle(data['title'])
-            self.registerViewTitle = FieldTitle(data['title'])
         else:
             self.title = FieldTitle("")
-            self.registerViewTitle = FieldTitle("")
-        self.registerViewTitle.setEditable(False)
 
     def toData(self):
         field = {}
@@ -215,6 +207,21 @@ class Field:
         return self.FieldItem.index().row()
 
     def getRegisterViewRow(self):
+        self.registerViewFieldItem = FieldItem(
+            self.FieldItem.name
+        )
+        self.registerViewFieldItem.setEditable(False)
+
+        self.registerViewTitle = FieldTitle(
+            self.title.text()
+        )
+        self.registerViewTitle.setEditable(False)
+
+        self.registerViewDescription = FieldDescription(
+            self.description.text()
+        )
+        self.registerViewDescription.setEditable(False)
+
         return [
             self.registerViewFieldItem,
             NullItem(),
@@ -234,14 +241,17 @@ class Field:
 
     def itemDataChanged(self, item): #Some data has to be also updated on the register view
         if isinstance(item, FieldItem):
-            self.registerViewFieldItem.setText(
-                item.text()
-            )
+            if isinstance(self.registerViewFieldItem, FieldItem):
+                self.registerViewFieldItem.setText(
+                    item.text()
+                )
         elif isinstance(item, FieldTitle):
-            self.registerViewTitle.setText(
-                item.text()
-            )
+            if isinstance(self.registerViewFieldItem, FieldTitle):
+                self.registerViewTitle.setText(
+                    item.text()
+                )
         elif isinstance(item, FieldDescription):
-            self.registerViewDescription.setText(
-                item.text()
-            )
+            if isinstance(self.registerViewFieldItem, FieldDescription):
+                self.registerViewDescription.setText(
+                    item.text()
+                )

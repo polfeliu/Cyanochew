@@ -887,6 +887,12 @@ class ArrayEdit(QtWidgets.QLineEdit):
         # Now if one of the items is not int()able the program crashes
         return [int(s.strip()) for s in self.text().split(",")]
 
+sys._excepthook = sys.excepthook
+def exception_hook(exctype, value, traceback):
+    print(exctype, value, traceback)
+    sys._excepthook(exctype, value, traceback)
+    sys.exit(1)
+sys.excepthook = exception_hook
 
 app = QtWidgets.QApplication([])
 window = Window()
