@@ -2,12 +2,16 @@ from sly import Lexer, Parser
 
 class FunctionLexer(Lexer):
     tokens = {
-        'NAME', 'INT', 'FLOAT'
+        'TYPE', 'REGISTER', 'DELAY', 'ARROW', 'NAME', 'INT', 'FLOAT',
         }
     ignore = ' \t'
-    literals = { '=', '+', '-', '*', '/', '(', ')'}
+    literals = { '=', '+', '-', '*', '/', '(', ')', ':'}
 
     # Tokens
+    TYPE = r'int8|int16|int32|uint8|uint16|uint32|float32|float64'
+    REGISTER = r'register'
+    DELAY = r'delay for'
+    ARROW = r'<-'
     NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
 
     @_(r"\d+\.\d*")
@@ -23,6 +27,10 @@ class FunctionLexer(Lexer):
     @_(r'\n+')
     def newline(self, t):
         self.lineno += t.value.count('\n')
+
+    def TYPE(self, t):
+        t.value = t.value
+        return t
 
     def NAME(self, t):
         t.value = t.value.upper()
@@ -44,10 +52,42 @@ class FunctionParser(Parser):
     def __init__(self):
         self.names = { }
 
+    # Empty declaration
+    @_('NAME ":" expr')
+    def statement(self, p):
+        print(p.expr)
+
+    # Declaration with assignment
+    @_('NAME ":" TYPE "=" expr')
+    def statement(self, p):
+        print(p.expr)
+
+    # Reassignment without declaration
     @_('NAME "=" expr')
     def statement(self, p):
         self.names[p.NAME] = p.expr
 
+    # cmdWrite
+    @_(' REGISTER NAME ARROW NAME')
+    def statement(self, p):
+        print("cmdWrite")
+
+    # rawRead
+    @_(' NAME ARROW REGISTER NAME')
+    def statement(self, p):
+        print("cmdRead")
+
+    # delay
+    @_('DELAY INT ":"')
+    def statement(self, p):
+        print("delay")
+
+    @_('DELAY FLOAT ":"')
+    def statement(self, p):
+        print("delay")
+
+
+    #TODO To now display value, will be deprecated
     @_('expr')
     def statement(self, p):
         print(p.expr)
@@ -101,4 +141,6 @@ if __name__ == '__main__':
         except EOFError:
             break
         if text:
-            parser.parse(lexer.tokenize(text))
+            t = lexer.tokenize(text)
+            #print([tok for tok in t])
+            parser.parse(t)
