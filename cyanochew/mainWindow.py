@@ -425,6 +425,7 @@ class Window(QtWidgets.QMainWindow):
         self.registerLayoutView = None
         self.registerLayoutView = RegisterLayoutView()
         self.registerLayoutView.registerLayout.registerlength = self.editingRegister.getLength()
+        self.registerLayoutView.registerLayout.registername = self.editingRegister.getName()
 
         self.registerLayoutView.SaveRequest.connect(self.registerLayoutViewSave)
         self.registerLayoutView.CloseRequest.connect(self.registerLayoutViewClose)
