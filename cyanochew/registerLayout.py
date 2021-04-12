@@ -157,7 +157,8 @@ class _RegisterLayout(QtWidgets.QWidget):
                 # Find if start element or end element is inside the range
                 if field2.bitStart in ran or field2.bitEnd in ran:
                     field1.overlapped = True
-                    break
+                    field2.overlapped = True
+
 
     def updateSplitFields(self):
         for field in self.fields:
