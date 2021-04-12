@@ -391,7 +391,6 @@ class Window(QtWidgets.QMainWindow):
 
             self.addField(field.name, data)
 
-            print(field.name)
 
     def registerLayoutViewClose(self):
         self.registerLayoutView.close()
@@ -522,7 +521,6 @@ class Window(QtWidgets.QMainWindow):
         for i in range(registerItem.rowCount()): #Search the field child item
             field = registerItem.child(i, 0)
             if isinstance(field, FieldItem):
-                print(field.text())
                 if field.text() == fieldname:
                     index = i;
 

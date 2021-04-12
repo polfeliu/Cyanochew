@@ -131,6 +131,9 @@ class _RegisterLayout(QtWidgets.QWidget):
 
     def newField(self, name: str, field: dict) -> Union[FieldLayoutItem, bool]:
         try:
+            if 'type' not in field:
+                field['type'] =  ""
+
             f = FieldLayoutItem(
                 name=name,
                 bitEnd=field['bitEnd'],
