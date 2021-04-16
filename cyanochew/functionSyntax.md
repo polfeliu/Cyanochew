@@ -3,26 +3,23 @@
 # Hello I'm a comment
 ```
 
-# Function declaration
-declares input variables(s) and return variable(s)
-
-inline
+# Function declaration and return
+declares function name and input variables(s)
 ```
-def funcname(in: int16, in2: float32) -> out: int64:
+def funcname(in1: int16,in2: float32):
     #Body of the function
 ```
 
-breaking lines and parentheses for multiple output variables
+at the end of the function there should be a return that specified which variables are returned.
+
 ```
-def funcname(
-    in1: int16,
-    in2: float32
-) -> (
-    out1: float32, 
-    out2: int8
-):
-    #Body of the function
+return var1
 ```
+the specs also supports to return list of variables
+```
+return [var1, var2, var3]
+```
+
 
 # Expressions
 ## Sum

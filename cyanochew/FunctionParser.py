@@ -2,14 +2,16 @@ from sly import Lexer, Parser
 
 class FunctionLexer(Lexer):
     tokens = {
-        'TYPE', 'REGISTER', 'DELAY', 'ARROW', 'NAME', 'INT', 'FLOAT',
+        'TYPE', 'DEF', 'RETURN', 'REGISTER', 'DELAY', 'ARROW', 'NAME', 'INT', 'FLOAT',
         }
     ignore = ' \t'
-    literals = { '=', '+', '-', '*', '/', '(', ')', ':'}
+    literals = { '=', '+', '-', '*', '/', '(', ')', ':', ",", "#", "[", "]"}
 
     # Tokens
     TYPE = r'int8|int16|int32|uint8|uint16|uint32|float32|float64'
-    REGISTER = r'register'
+    DEF = 'def '
+    RETURN = 'return '
+    REGISTER = r'register '
     DELAY = r'delay for'
     ARROW = r'<-'
     NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
@@ -51,6 +53,21 @@ class FunctionParser(Parser):
 
     def __init__(self):
         self.names = { }
+
+    # Function declaration
+    @_('DEF NAME "(" NAME  ":" TYPE { "," NAME  ":" TYPE } ")" ":" ')
+    def statement(self, p):
+        print(p.NAME1, p.TYPE0, p.NAME2, p.TYPE1)
+
+    # Function return variable
+    @_('RETURN NAME')
+    def statement(self, p):
+        print(p)
+
+    # Function return list of variables
+    @_('RETURN "[" NAME { "," NAME } "]"')
+    def statement(self, p):
+        print(p.NAME0, p.NAME1)
 
     # Empty declaration
     @_('NAME ":" expr')
@@ -137,10 +154,14 @@ if __name__ == '__main__':
     parser = FunctionParser()
     while True:
         try:
-            text = input('calc > ')
+            #text = input('calc > ')
+            #text = "def asdf(qwer: int8, fdfsfd: uint32):"
+            text = "return [adsf,wqr,sdf]"
         except EOFError:
             break
         if text:
             t = lexer.tokenize(text)
             #print([tok for tok in t])
             parser.parse(t)
+
+        break
