@@ -2,9 +2,9 @@ from sly import Lexer, Parser
 
 class FunctionLexer(Lexer):
     tokens = {
-        'TYPE', 'DEF', 'RETURN', 'REGISTER', 'DELAY', 'ARROW', 'NAME', 'INT', 'FLOAT',
+        'TYPE', 'DEF', 'RETURN', 'REGISTER', 'DELAY', 'ARROW', 'NAME', 'INT', 'FLOAT', 'NEWLINE'
         }
-    ignore = ' \t'
+    ignore = ' '
     literals = { '=', '+', '-', '*', '/', '(', ')', ':', ",", "#", "[", "]"}
 
     # Tokens
@@ -15,6 +15,7 @@ class FunctionLexer(Lexer):
     DELAY = r'delay for'
     ARROW = r'<-'
     NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
+    NEWLINE = '\n'
 
     @_(r"\d+\.\d*")
     def FLOAT(self, t):
@@ -53,6 +54,22 @@ class FunctionParser(Parser):
 
     def __init__(self):
         self.names = { }
+
+    @_('{ NEWLINE } statements { NEWLINE }')
+    def program(self, p):
+        return p.statements
+
+    # Statement
+    @_('statements { NEWLINE } statement')
+    def statements(self, p):
+        p.statements.append(p.statement)
+        return p.statements
+
+    
+    @_('statement')
+    def statements(self, p):
+        return [p.statement]
+
 
     # Function declaration
     @_('DEF NAME "(" NAME  ":" TYPE { "," NAME  ":" TYPE } ")" ":" ')
@@ -154,14 +171,14 @@ if __name__ == '__main__':
     parser = FunctionParser()
     while True:
         try:
-            #text = input('calc > ')
-            #text = "def asdf(qwer: int8, fdfsfd: uint32):"
-            text = "return [adsf,wqr,sdf]"
+            text = """
+            asdf: int8
+            """
         except EOFError:
             break
         if text:
             t = lexer.tokenize(text)
-            #print([tok for tok in t])
-            parser.parse(t)
+            p = parser.parse(t)
+            print(p)
 
         break
