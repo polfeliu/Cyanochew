@@ -2,14 +2,14 @@ from sly import Lexer, Parser
 
 class FunctionLexer(Lexer):
     tokens = {
-        'TYPE', 'DEF', 'RETURN', 'REGISTER', 'DELAY', 'ARROW', 'NAME', 'INT', 'FLOAT', 'NEWLINE'
+        'TYPE', 'FUN', 'RETURN', 'REGISTER', 'DELAY', 'ARROW', 'NAME', 'INT', 'FLOAT', 'NEWLINE'
         }
     ignore = ' '
-    literals = { '=', '+', '-', '*', '/', '(', ')', ':', ",", "#", "[", "]"}
+    literals = { '=', '+', '-', '*', '/', '(', ')', ':', ",", "#", "[", "]", "{", "}"}
 
     # Tokens
     TYPE = r'int8|int16|int32|uint8|uint16|uint32|float32|float64'
-    DEF = 'def '
+    FUN = 'fun'
     RETURN = 'return '
     REGISTER = r'register '
     DELAY = r'delay for'
@@ -46,6 +46,8 @@ class FunctionLexer(Lexer):
 class FunctionParser(Parser):
     tokens = FunctionLexer.tokens
 
+    debugfile = 'parser.out'
+
     precedence = (
         ('left', '+', '-'),
         ('left', '*', '/'),
@@ -59,7 +61,7 @@ class FunctionParser(Parser):
     def program(self, p):
         pass
 
-    @_('functiondef NEWLINE { NEWLINE } statements NEWLINE { NEWLINE } returndef')
+    @_('functiondef "{"  { NEWLINE } statements NEWLINE { NEWLINE } returndef { NEWLINE } "}" ')
     def function(self,p):
         pass
 
@@ -68,7 +70,6 @@ class FunctionParser(Parser):
     def statements(self, p):
         p.statements.append(p.statement)
         return p.statements
-
     
     @_('statement')
     def statements(self, p):
@@ -76,7 +77,7 @@ class FunctionParser(Parser):
 
 
     # Function declaration
-    @_('DEF NAME "(" NAME  ":" TYPE { "," NAME  ":" TYPE } ")" ":" ')
+    @_('FUN NAME "(" NAME  ":" TYPE { "," NAME  ":" TYPE } ")" ')
     def functiondef(self, p):
         print(p.NAME1, p.TYPE0, p.NAME2, p.TYPE1)
 
@@ -116,19 +117,17 @@ class FunctionParser(Parser):
         print("cmdRead")
 
     # delay
-    @_('DELAY INT ":"')
+    @_('delaydef "{" { NEWLINE } statements { NEWLINE } "}" ')
     def statement(self, p):
+        print("qwer")
+
+    @_('DELAY INT')
+    def delaydef(self, p):
         print("delay")
 
-    @_('DELAY FLOAT ":"')
-    def statement(self, p):
+    @_('DELAY FLOAT ')
+    def delaydef(self, p):
         print("delay")
-
-
-    #TODO To now display value, will be deprecated
-    @_('expr')
-    def statement(self, p):
-        print(p.expr)
 
     @_('expr "+" expr')
     def expr(self, p):
@@ -176,11 +175,11 @@ if __name__ == '__main__':
     while True:
         try:
             text = open("script.cyano", 'r').read()
-            print(text)
         except EOFError:
             break
         if text:
             print([tok for tok in lexer.tokenize(text)])
-            p = parser.parse(lexer.tokenize(text))
+            #p = parser.parse(lexer.tokenize(text))
+            print(parser.log)
 
         break

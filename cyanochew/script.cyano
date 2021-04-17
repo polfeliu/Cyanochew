@@ -1,8 +1,12 @@
-def asdf(d: int8, q: int32):
+fun something(d: int8, q: int32){
     asdf: int8
-    qwer: int32
-    register asdf <- asdf
+
+    #Comment
+
+    delay for 123 {
+        qwer: int8
+        register fdsa <- asdf
+    }
+
     return asdf
-
-
-
+}

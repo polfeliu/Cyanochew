@@ -6,8 +6,9 @@
 # Function declaration and return
 declares function name and input variables(s)
 ```
-def funcname(in1: int16,in2: float32):
+fun funcname(in1: int16,in2: float32){
     #Body of the function
+}
 ```
 
 at the end of the function there should be a return that specified which variables are returned.
@@ -73,6 +74,7 @@ var1 <- register registerA
 ```
 ## delay
 ```
-delay for 500:
+delay for 500{
     #more Idented commands
+}
 ```
