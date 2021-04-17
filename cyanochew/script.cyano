@@ -1,12 +1,10 @@
 fun something(d: int8, q: int32){
     asdf: int8
 
-    #Comment
-
     delay for 123 {
-        qwer: int8
+        asdf:int8
         register fdsa <- asdf
     }
 
-    return asdf
+    return [asdf,qwe]
 }
