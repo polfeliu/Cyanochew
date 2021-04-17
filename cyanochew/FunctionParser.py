@@ -55,9 +55,13 @@ class FunctionParser(Parser):
     def __init__(self):
         self.names = { }
 
-    @_('{ NEWLINE } statements { NEWLINE }')
+    @_(' { NEWLINE } { function } { NEWLINE } ')
     def program(self, p):
-        return p.statements
+        pass
+
+    @_('functiondef NEWLINE { NEWLINE } statements NEWLINE { NEWLINE } returndef')
+    def function(self,p):
+        pass
 
     # Statement
     @_('statements NEWLINE { NEWLINE } statement')
@@ -73,12 +77,12 @@ class FunctionParser(Parser):
 
     # Function declaration
     @_('DEF NAME "(" NAME  ":" TYPE { "," NAME  ":" TYPE } ")" ":" ')
-    def statement(self, p):
+    def functiondef(self, p):
         print(p.NAME1, p.TYPE0, p.NAME2, p.TYPE1)
 
     # Function return variable
     @_('RETURN NAME')
-    def statement(self, p):
+    def returndef(self, p):
         print(p)
 
     # Function return list of variables
@@ -171,10 +175,8 @@ if __name__ == '__main__':
     parser = FunctionParser()
     while True:
         try:
-            text = """
-            asdf: int8
-            qwer: int32
-            """
+            text = open("script.cyano", 'r').read()
+            print(text)
         except EOFError:
             break
         if text:

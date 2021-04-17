@@ -1,0 +1,8 @@
+def asdf(d: int8, q: int32):
+    asdf: int8
+    qwer: int32
+    register asdf <- asdf
+    return asdf
+
+
+
