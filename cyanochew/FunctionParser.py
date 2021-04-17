@@ -60,7 +60,7 @@ class FunctionParser(Parser):
         return p.statements
 
     # Statement
-    @_('statements { NEWLINE } statement')
+    @_('statements NEWLINE { NEWLINE } statement')
     def statements(self, p):
         p.statements.append(p.statement)
         return p.statements
@@ -87,9 +87,9 @@ class FunctionParser(Parser):
         print(p.NAME0, p.NAME1)
 
     # Empty declaration
-    @_('NAME ":" expr')
+    @_('NAME ":" TYPE')
     def statement(self, p):
-        print(p.expr)
+        print(p)
 
     # Declaration with assignment
     @_('NAME ":" TYPE "=" expr')
@@ -173,12 +173,12 @@ if __name__ == '__main__':
         try:
             text = """
             asdf: int8
+            qwer: int32
             """
         except EOFError:
             break
         if text:
-            t = lexer.tokenize(text)
-            p = parser.parse(t)
-            print(p)
+            print([tok for tok in lexer.tokenize(text)])
+            p = parser.parse(lexer.tokenize(text))
 
         break
