@@ -98,7 +98,7 @@ class Window(QtWidgets.QMainWindow):
 
         self.show()
 
-        #self.openFile('../test/peripherals/example.yaml')#Temporary, normally will be made from open command
+        self.openFile('../test/peripherals/example.yaml')#Temporary, normally will be made from open command
         #self.saveFile('../test/peripherals/exampleSaveAs.yaml', copy=True)#Temporary
         #self.reset()
 
@@ -182,8 +182,17 @@ class Window(QtWidgets.QMainWindow):
 
             self.enableI2C('i2c' in data)
             self.enableSPI('spi' in data)
+            try:
+                self.dataToObjects(data)
+            except Exception as ex:
+                diag = QtWidgets.QMessageBox()
+                diag.setIcon(QtWidgets.QMessageBox.Error)
+                diag.setText("Error while opening file")
+                diag.setInformativeText(ex)
+                diag.setWindowTitle("Error")
+                diag.setStandardButtons(QtWidgets.QMessageBox.Ok)
+                diag.exec_()
 
-            self.dataToObjects(data)
             self.originalData = data
             self.openedFile = path
 
