@@ -1,2 +1,59 @@
 extend = "tools/rulesets/ruff/ruff.toml"
-extend-exclude = ["tools/rulesets"]
+# test/templates holds Python 2 style code-generation templates that do not parse as Python.
+extend-exclude = ["tools/rulesets", "test/templates"]
+
+[lint]
+ignore = [
+    # TODO(rulesets): fix 35 in 3 file(s), e.g. Undefined name `QStyleOptionViewItem`
+    "undefined-name",
+    # TODO(rulesets): fix 29 in 2 file(s), e.g. Variable `I2C` in function should be lowercase
+    "non-lowercase-variable-in-function",
+    # TODO(rulesets): fix 23 in 4 file(s), e.g. Variable `bitEnd` in class scope should not be mixedCase
+    "mixed-case-variable-in-class-scope",
+    # TODO(rulesets): fix 18 in 1 file(s), e.g. Redefinition of unused `TYPE` from line 23: `TYPE` redefined here
+    "redefined-while-unused",
+    # TODO(rulesets): fix 12 in 3 file(s), e.g. Missing author in TODO; try: `# TODO(<author_name>): ...` or `# TODO @<author_na
+    "missing-todo-author",
+    # TODO(rulesets): fix 12 in 3 file(s), e.g. Missing colon in TODO
+    "missing-todo-colon",
+    # TODO(rulesets): fix 12 in 3 file(s), e.g. Missing issue link for this TODO
+    "missing-todo-link",
+    # TODO(rulesets): fix 10 in 5 file(s), e.g. Mutable default value for class attribute
+    "mutable-class-default",
+    # TODO(rulesets): fix 9 in 1 file(s), e.g. Missing explicit `return` at the end of function able to return non-`None` value
+    "implicit-return",
+    # TODO(rulesets): fix 7 in 1 file(s), e.g. PEP 484 prohibits implicit `Optional`
+    "implicit-optional",
+    # TODO(rulesets): fix 5 in 2 file(s), e.g. Variable `type` is shadowing a Python builtin
+    "builtin-variable-shadowing",
+    # TODO(rulesets): fix 5 in 2 file(s), e.g. Function argument `set` is shadowing a Python builtin
+    "builtin-argument-shadowing",
+    # TODO(rulesets): fix 4 in 2 file(s), e.g. `pathlib.Path(...).open` in text mode without explicit `encoding` argument
+    "unspecified-encoding",
+    # TODO(rulesets): fix 4 in 2 file(s), e.g. Do not use bare `except`
+    "bare-except",
+    # TODO(rulesets): fix 4 in 1 file(s), e.g. Loop control variable `object` not used within loop body
+    "unused-loop-control-variable",
+    # TODO(rulesets): fix 3 in 2 file(s), e.g. Found commented-out code
+    "commented-out-code",
+    # TODO(rulesets): fix 3 in 1 file(s), e.g. Multiple `isinstance` calls for `handle`, merge into a single call
+    "duplicate-isinstance-call",
+    # TODO(rulesets): fix 3 in 1 file(s), e.g. When using only the keys of a dict use the `keys()` method
+    "incorrect-dict-iterator",
+    # TODO(rulesets): fix 3 in 1 file(s), e.g. Use `key in dict` instead of `key in dict.keys()`
+    "in-dict-keys",
+    # TODO(rulesets): fix 2 in 2 file(s), e.g. Use format specifiers instead of percent format
+    "printf-string-formatting",
+    # TODO(rulesets): fix 1 in 1 file(s), e.g. Use a single `if` statement instead of nested `if` statements
+    "collapsible-if",
+    # TODO(rulesets): fix 1 in 1 file(s), e.g. Consider `[p.NAME0, *p.NAME1]` instead of concatenation
+    "collection-literal-concatenation",
+    # TODO(rulesets): fix 1 in 1 file(s), e.g. Use a context manager for opening files
+    "open-file-with-context-handler",
+    # TODO(rulesets): fix 1 in 1 file(s), e.g. Missing issue description after `TODO`
+    "missing-todo-description",
+    # TODO(rulesets): fix 1 in 1 file(s), e.g. Use ternary operator `description = obj["description"] if "description" in obj e
+    "if-else-block-instead-of-if-exp",
+    # TODO(rulesets): fix 1 in 1 file(s), e.g. Variable `exampleView` in global scope should not be mixedCase
+    "mixed-case-variable-in-global-scope",
+]
