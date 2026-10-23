@@ -1,0 +1,2 @@
+extend = "tools/rulesets/ruff/ruff.toml"
+extend-exclude = ["tools/rulesets"]
