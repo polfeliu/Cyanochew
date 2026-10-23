@@ -1,29 +1,31 @@
-from PyQt5.Qt import QStandardItem, QStyledItemDelegate
 from Field import Field
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
+from PyQt5.Qt import QStandardItem, QStyledItemDelegate
 from PyQt5.QtWidgets import QWidget
 
 
 class RegisterItem(QStandardItem):
     name = None
+
     def __init__(self, name: str):
         self.name = name
         super().__init__(name)
 
-class RegisterTitle(QStandardItem): #Required
+
+class RegisterTitle(QStandardItem):  # Required
     pass
 
 
-class RegisterDescription(QStandardItem): #Required
+class RegisterDescription(QStandardItem):  # Required
     pass
 
 
-class RegisterAddress(QStandardItem): #Required
+class RegisterAddress(QStandardItem):  # Required
     def __init__(self, address: int):
         super().__init__(str(address))
 
 
-class RegisterLength(QStandardItem): #Required
+class RegisterLength(QStandardItem):  # Required
     def __init__(self, length):
         super().__init__(str(length))
 
@@ -35,53 +37,62 @@ class RegisterSigned(QStandardItem):
 class RegisterReadWrite(QStandardItem):
     pass
 
-class RegisterLengthDelegate(QStyledItemDelegate):
 
+class RegisterLengthDelegate(QStyledItemDelegate):
     def __init__(self, owner):
         super().__init__(owner)
 
-    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
+    def createEditor(
+        self, parent: QWidget, option: "QStyleOptionViewItem", index: QtCore.QModelIndex
+    ) -> QWidget:
         editor = QtWidgets.QSpinBox(parent)
         editor.setMinimum(0)
         editor.setMaximum(128)
         return editor
 
-class RegisterAddressDelegate(QStyledItemDelegate):
 
+class RegisterAddressDelegate(QStyledItemDelegate):
     def __init__(self, owner):
         super().__init__(owner)
 
-    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
+    def createEditor(
+        self, parent: QWidget, option: "QStyleOptionViewItem", index: QtCore.QModelIndex
+    ) -> QWidget:
         editor = QtWidgets.QSpinBox(parent)
         editor.setMinimum(0)
         editor.setMaximum(2**16)
         return editor
 
-class RegisterSignedDelegate(QStyledItemDelegate):
 
+class RegisterSignedDelegate(QStyledItemDelegate):
     def __init__(self, owner):
         super().__init__(owner)
 
     valid = ["true", "false"]
 
-    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
+    def createEditor(
+        self, parent: QWidget, option: "QStyleOptionViewItem", index: QtCore.QModelIndex
+    ) -> QWidget:
         editor = QtWidgets.QComboBox(parent)
-        editor.addItem("") #Allow to be undefined
+        editor.addItem("")  # Allow to be undefined
         editor.addItems(self.valid)
         return editor
 
-class RegisterReadWriteDelegate(QStyledItemDelegate):
 
+class RegisterReadWriteDelegate(QStyledItemDelegate):
     def __init__(self, owner):
         super().__init__(owner)
 
     valid = ["R", "R/W", "W", "n"]
 
-    def createEditor(self, parent: QWidget, option: 'QStyleOptionViewItem', index: QtCore.QModelIndex) -> QWidget:
+    def createEditor(
+        self, parent: QWidget, option: "QStyleOptionViewItem", index: QtCore.QModelIndex
+    ) -> QWidget:
         editor = QtWidgets.QComboBox(parent)
-        editor.addItem("") #Allow to be undefined
+        editor.addItem("")  # Allow to be undefined
         editor.addItems(self.valid)
         return editor
+
 
 class Register:
     RegisterItem = None
@@ -96,49 +107,49 @@ class Register:
     def __init__(self, name: str, data: dict):
         self.RegisterItem = RegisterItem(name)
 
-        if 'title' in data:
-            self.title = RegisterTitle(data['title'])
+        if "title" in data:
+            self.title = RegisterTitle(data["title"])
         else:
             self.title = RegisterTitle()
 
-        if 'description' in data:
-            self.description = RegisterDescription(data['description'])
+        if "description" in data:
+            self.description = RegisterDescription(data["description"])
         else:
             self.description = RegisterDescription("")
 
-        if 'address' in data:
-            self.address = RegisterAddress(data['address'])
+        if "address" in data:
+            self.address = RegisterAddress(data["address"])
         else:
             self.address = RegisterAddress(0)
 
-        if 'length' in data:
-            self.length = RegisterLength(data['length'])
+        if "length" in data:
+            self.length = RegisterLength(data["length"])
         else:
             self.length = RegisterLength(0)
 
-        if 'signed' in data:
-            self.signed = RegisterSigned(data['signed'])
+        if "signed" in data:
+            self.signed = RegisterSigned(data["signed"])
         else:
             self.signed = RegisterSigned("")
 
-        if 'readWrite' in data:
-            self.readWrite = RegisterReadWrite(data['readWrite'])
+        if "readWrite" in data:
+            self.readWrite = RegisterReadWrite(data["readWrite"])
         else:
             self.readWrite = RegisterReadWrite("")
 
     def toData(self):
         register = {}
-        register['title'] = self.title.text() # required
-        register['description'] = self.description.text() # required
-        register['address'] = int(self.address.text()) # required
-        register['length'] = int(self.length.text()) # required
+        register["title"] = self.title.text()  # required
+        register["description"] = self.description.text()  # required
+        register["address"] = int(self.address.text())  # required
+        register["length"] = int(self.length.text())  # required
 
         if self.signed.text() in RegisterSignedDelegate.valid:
-            register['signed']  = self.signed.text()
-            #else don't define it as it's not required
+            register["signed"] = self.signed.text()
+            # else don't define it as it's not required
 
         if self.readWrite.text() in RegisterReadWriteDelegate.valid:
-            register['readWrite'] = self.readWrite.text()
+            register["readWrite"] = self.readWrite.text()
             # else don't define it as it's not required
 
         return register
@@ -159,13 +170,11 @@ class Register:
             self.signed,
             self.readWrite,
             self.title,
-            self.description
+            self.description,
         ]
 
     def getRegisterViewRowIndex(self):
         return self.RegisterItem.index().row()
 
     def addFieldToTree(self, field: Field):
-        self.RegisterItem.appendRow(
-            field.getRegisterViewRow()
-        )
+        self.RegisterItem.appendRow(field.getRegisterViewRow())

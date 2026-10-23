@@ -1,35 +1,47 @@
+import pathlib
+
 from sly import Lexer, Parser
+
 
 class FunctionLexer(Lexer):
     tokens = {
-        'TYPE', 'FUN', 'RETURN', 'REGISTER', 'DELAY', 'ARROW', 'NAME', 'INT', 'FLOAT', 'NEWLINE'
-        }
-    ignore = ' '
-    literals = { '=', '+', '-', '*', '/', '(', ')', ':', ",", "#", "[", "]", "{", "}"}
+        "TYPE",
+        "FUN",
+        "RETURN",
+        "REGISTER",
+        "DELAY",
+        "ARROW",
+        "NAME",
+        "INT",
+        "FLOAT",
+        "NEWLINE",
+    }
+    ignore = " "
+    literals = {"=", "+", "-", "*", "/", "(", ")", ":", ",", "#", "[", "]", "{", "}"}
 
     # Tokens
-    TYPE = r'int8|int16|int32|uint8|uint16|uint32|float32|float64'
-    FUN = 'fun'
-    RETURN = 'return '
-    REGISTER = r'register '
-    DELAY = r'delay for'
-    ARROW = r'<-'
-    NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
-    NEWLINE = '\n'
+    TYPE = r"int8|int16|int32|uint8|uint16|uint32|float32|float64"
+    FUN = "fun"
+    RETURN = "return "
+    REGISTER = r"register "
+    DELAY = r"delay for"
+    ARROW = r"<-"
+    NAME = r"[a-zA-Z_][a-zA-Z0-9_]*"
+    NEWLINE = "\n"
 
     @_(r"\d+\.\d*")
     def FLOAT(self, t):
         t.value = float(t.value)
         return t
 
-    @_(r'\d+')
+    @_(r"\d+")
     def INT(self, t):
         t.value = int(t.value)
         return t
 
-    @_(r'\n+')
+    @_(r"\n+")
     def newline(self, t):
-        self.lineno += t.value.count('\n')
+        self.lineno += t.value.count("\n")
 
     def TYPE(self, t):
         return t
@@ -42,46 +54,116 @@ class FunctionLexer(Lexer):
         self.index += 1
 
 
-class Function:pass
-class Functiondef:pass
-class Comment:pass
-class Return:pass
-class Sum:pass
-class Difference:pass
-class Product:pass
-class Division:pass
-class Power:pass
-class Modulus:pass
-class BitwiseOr:pass
-class BitwiseAnd:pass
-class BitshitLeft:pass
-class BitshitRight:pass
-class ArcTangent:pass
-class Declaration:pass
-class AssignmentDeclaration:pass
-class Assignment:pass
-class CmdWrite:pass
-class RawRead:pass
-class Delay:pass
-class Number:pass
-class Variable:pass
+class Function:
+    pass
+
+
+class Functiondef:
+    pass
+
+
+class Comment:
+    pass
+
+
+class Return:
+    pass
+
+
+class Sum:
+    pass
+
+
+class Difference:
+    pass
+
+
+class Product:
+    pass
+
+
+class Division:
+    pass
+
+
+class Power:
+    pass
+
+
+class Modulus:
+    pass
+
+
+class BitwiseOr:
+    pass
+
+
+class BitwiseAnd:
+    pass
+
+
+class BitshitLeft:
+    pass
+
+
+class BitshitRight:
+    pass
+
+
+class ArcTangent:
+    pass
+
+
+class Declaration:
+    pass
+
+
+class AssignmentDeclaration:
+    pass
+
+
+class Assignment:
+    pass
+
+
+class CmdWrite:
+    pass
+
+
+class RawRead:
+    pass
+
+
+class Delay:
+    pass
+
+
+class Number:
+    pass
+
+
+class Variable:
+    pass
+
 
 class FunctionParser(Parser):
     tokens = FunctionLexer.tokens
 
-    debugfile = 'parser.out'
+    debugfile = "parser.out"
 
     precedence = (
-        ('left', '+', '-'),
-        ('left', '*', '/'),
-        ('right', 'UMINUS'),
-        )
+        ("left", "+", "-"),
+        ("left", "*", "/"),
+        ("right", "UMINUS"),
+    )
 
     def __init__(self):
-        self.names = { }
+        self.names = {}
 
-    @_(' { NEWLINE } functiondef "{"  { NEWLINE } statements NEWLINE { NEWLINE } returndef { NEWLINE } "}" { NEWLINE } ')
-    def function(self,p):
+    @_(
+        ' { NEWLINE } functiondef "{"  { NEWLINE } statements NEWLINE { NEWLINE } returndef { NEWLINE } "}" { NEWLINE } '
+    )
+    def function(self, p):
         f = Function()
         f.functiondef = p.functiondef
         f.statements = p.statements
@@ -89,12 +171,12 @@ class FunctionParser(Parser):
         return f
 
     # Statement
-    @_('statements NEWLINE { NEWLINE } statement')
+    @_("statements NEWLINE { NEWLINE } statement")
     def statements(self, p):
         p.statements.append(p.statement)
         return p.statements
-    
-    @_('statement')
+
+    @_("statement")
     def statements(self, p):
         return [p.statement]
 
@@ -103,9 +185,7 @@ class FunctionParser(Parser):
     def functiondef(self, p):
         f = Functiondef()
         f.name = p.NAME0
-        f.variables = {
-            p.NAME1 : p.TYPE0
-        }
+        f.variables = {p.NAME1: p.TYPE0}
         for i in range(len(p.NAME2)):
             name = p.NAME2[i]
             type = p.TYPE1[i]
@@ -114,7 +194,7 @@ class FunctionParser(Parser):
         return f
 
     # Function return variable
-    @_('RETURN NAME')
+    @_("RETURN NAME")
     def returndef(self, p):
         r = Return()
         r.variables = [p.NAME]
@@ -151,7 +231,7 @@ class FunctionParser(Parser):
         return a
 
     # cmdWrite
-    @_(' REGISTER NAME ARROW NAME')
+    @_(" REGISTER NAME ARROW NAME")
     def statement(self, p):
         c = CmdWrite()
         c.register = p.NAME0
@@ -159,7 +239,7 @@ class FunctionParser(Parser):
         return c
 
     # rawRead
-    @_(' NAME ARROW REGISTER NAME')
+    @_(" NAME ARROW REGISTER NAME")
     def statement(self, p):
         r = RawRead()
         r.register = p.NAME1
@@ -174,11 +254,11 @@ class FunctionParser(Parser):
         d.body = p.statements
         return d
 
-    @_('DELAY INT')
+    @_("DELAY INT")
     def delaydef(self, p):
         return int(p.INT)
 
-    @_('DELAY FLOAT ')
+    @_("DELAY FLOAT ")
     def delaydef(self, p):
         return float(p.FLOAT)
 
@@ -213,7 +293,7 @@ class FunctionParser(Parser):
     @_('"-" expr %prec UMINUS')
     def expr(self, p):
         d = Difference()
-        n0 =  Number()
+        n0 = Number()
         n0.value = 0
         d.minuend = n0
         d.subtrahend = p.expr
@@ -223,34 +303,35 @@ class FunctionParser(Parser):
     def expr(self, p):
         return p.expr
 
-    @_('INT')
+    @_("INT")
     def expr(self, p):
         n = Number()
         n.value = p.INT
         return n
 
-    @_('FLOAT')
+    @_("FLOAT")
     def expr(self, p):
         n = Number()
         n.value = p.FLOAT
         return n
 
-    @_('NAME')
+    @_("NAME")
     def expr(self, p):
         v = Variable()
         v.name = p.NAME
         return v
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     lexer = FunctionLexer()
     parser = FunctionParser()
     while True:
         try:
-            text = open("script.cyano", 'r').read()
+            text = pathlib.Path("script.cyano").open().read()
         except EOFError:
             break
         if text:
-            #print([tok for tok in lexer.tokenize(text)])
+            # print([tok for tok in lexer.tokenize(text)])
             p = parser.parse(lexer.tokenize(text))
             print(p)
 
